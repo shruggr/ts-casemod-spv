@@ -5,8 +5,7 @@ import type { TxoStorage } from "../txo-storage";
 import { Outpoint } from "../../models/outpoint";
 import { TxoSort, type TxoLookup, type TxoResults } from "../../models/search";
 import type { Network } from "../../spv-store";
-import type { TxLog } from "../../services/inv-service";
-import { ParseMode } from "../../models";
+import { ParseMode, TxLog } from "../../models";
 
 const TXO_DB_VERSION = 1;
 
@@ -75,7 +74,7 @@ function buildTxoIndex(txo: Txo) {
 }
 
 export class TxoStorageIDB implements TxoStorage {
-  private constructor(public db: IDBPDatabase<TxoSchema>) {}
+  private constructor(public db: IDBPDatabase<TxoSchema>) { }
   static async init(
     accountId: string,
     network: Network
@@ -156,13 +155,15 @@ export class TxoStorageIDB implements TxoStorage {
     from?: string
   ): Promise<TxoResults> {
     const dbkey = lookup.toQueryKey();
-    const start = from || dbkey;
-    const query: IDBKeyRange = IDBKeyRange.bound(
-      start,
-      dbkey + "\uffff",
+    const lower = from && sort == TxoSort.ASC ? from : dbkey;
+    const upper = from && sort == TxoSort.DESC ? from : dbkey + "\uffff";
+    const query = IDBKeyRange.bound(
+      lower,
+      upper,
       true,
-      false
+      true
     );
+
     const indexName = lookup.id ? "events" : "tags";
     const results: TxoResults = { txos: [] };
     const t = this.db.transaction("txos");
@@ -176,6 +177,7 @@ export class TxoStorageIDB implements TxoStorage {
       if (lookup.owner && txo.owner != lookup.owner) continue;
       results.txos.push(txo);
       if (limit > 0 && results.txos.length >= limit) {
+        await t.done;
         return results;
       }
     }
@@ -272,6 +274,7 @@ export class TxoStorageIDB implements TxoStorage {
   }
 
   async getTxLogs(txids: string[]): Promise<(TxLog | undefined)[]> {
+    if (!txids.length) return [];
     const t = this.db.transaction("txLog");
     const logs = await Promise.all(
       txids.map((txid) => t.store.get(txid).catch(() => undefined))
