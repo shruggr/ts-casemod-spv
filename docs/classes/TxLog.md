@@ -1,10 +1,14 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.44**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / TxLog
+[spv-store v0.1.44](../globals.md) / TxLog
 
 # Class: TxLog
+
+Represents a log of indexed transactions.
+
+ TxLog
 
 ## Constructors
 
@@ -26,7 +30,7 @@
 
 #### Defined in
 
-[services/inv-service.ts:6](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/inv-service.ts#L6)
+[models/index-context.ts:40](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-context.ts#L40)
 
 ## Properties
 
@@ -34,9 +38,11 @@
 
 > **height**: `number` = `0`
 
+The height of the block containing the transaction.
+
 #### Defined in
 
-[services/inv-service.ts:8](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/inv-service.ts#L8)
+[models/index-context.ts:42](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-context.ts#L42)
 
 ***
 
@@ -44,9 +50,11 @@
 
 > **idx**: `number` = `0`
 
+The index of the transaction in the block.
+
 #### Defined in
 
-[services/inv-service.ts:9](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/inv-service.ts#L9)
+[models/index-context.ts:43](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-context.ts#L43)
 
 ***
 
@@ -54,9 +62,11 @@
 
 > `optional` **source**: `string`
 
+The source of the indexed transaction.
+
 #### Defined in
 
-[services/inv-service.ts:5](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/inv-service.ts#L5)
+[models/index-context.ts:39](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-context.ts#L39)
 
 ***
 
@@ -64,9 +74,11 @@
 
 > `optional` **summary**: [`IndexSummary`](../type-aliases/IndexSummary.md)
 
+The summary of the indexed transaction.
+
 #### Defined in
 
-[services/inv-service.ts:4](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/inv-service.ts#L4)
+[models/index-context.ts:38](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-context.ts#L38)
 
 ***
 
@@ -74,6 +86,8 @@
 
 > **txid**: `string`
 
+The unique identifier of the transaction.
+
 #### Defined in
 
-[services/inv-service.ts:7](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/inv-service.ts#L7)
+[models/index-context.ts:41](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-context.ts#L41)

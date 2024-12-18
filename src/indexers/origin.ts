@@ -1,29 +1,31 @@
-import { P2PKH, Utils } from "@bsv/sdk";
-import type { IndexContext, IndexQueue } from "../models/index-context";
+import type { IndexContext } from "../models/index-context";
 import {
   Block,
   IndexData,
   Indexer,
   IndexMode,
   Outpoint,
+  parseAddress,
   ParseMode,
-  Txo,
-  TxoStatus,
+  TxoLookup,
+  TxoSort,
+  type BlockHeader,
   type Event,
   type Ingest,
 } from "../models";
 import { OneSatProvider } from "../providers/1sat-provider";
 import type { Inscription } from "./insc";
-import type { Ordinal } from "./remote-types";
-import { Listing } from "./ordlock";
-import type { TxoStore } from "../stores";
+import type { Sigma } from "./remote-types";
 import type { Network } from "../spv-store";
+import type { TxoStore } from "../stores";
 
+const TRIGGER = 783968;
 export interface Origin {
-  outpoint: string;
+  outpoint?: string;
   nonce?: number;
   insc?: Inscription;
   map?: { [key: string]: any };
+  sigma?: Sigma[];
 }
 
 export class OriginIndexer extends Indexer {
@@ -42,18 +44,27 @@ export class OriginIndexer extends Indexer {
 
   async parse(ctx: IndexContext, vout: number, parseMode = ParseMode.Persist): Promise<IndexData | undefined> {
     const txo = ctx.txos[vout];
-    if (txo.satoshis != 1n) return;
-
+    if (txo.satoshis != 1n || ctx.block.height < TRIGGER || txo.data.insc?.data?.file?.type == "application/bsv-20") return;
+    if(!txo.owner) {
+      txo.owner = parseAddress(ctx.tx.outputs[vout].lockingScript, 0, this.network);;
+    }
     let outSat = 0n;
     for (let i = 0; i < vout; i++) {
       outSat += ctx.txos[i].satoshis;
     }
-    let inSat = 0n;
-    let origin: Origin | undefined;
+    let satsIn = 0n;
+    let origin: Origin = {
+      outpoint: "",
+      insc: txo.data.insc?.data,
+      nonce: 0,
+      sigma: txo.data.sigma?.data
+    };
     const deps: Outpoint[] = [];
+    let spendOutpoint: Outpoint | undefined;
     for (const spend of ctx.spends.values()) {
       deps.push(spend.outpoint);
-      if (inSat == outSat && spend.satoshis == 1n) {
+      if (satsIn == outSat && spend.satoshis == 1n && spend.block.height >= TRIGGER) {
+        spendOutpoint = spend.outpoint;
         if (spend.data.origin?.data) {
           origin = {
             ...spend.data.origin.data,
@@ -61,151 +72,138 @@ export class OriginIndexer extends Indexer {
           if (origin?.nonce) {
             origin.nonce++;
           }
-        } else if (this.indexMode !== IndexMode.Verify) {
-          const remote = await this.oneSat.getTxo(spend.outpoint);
-          if (remote?.origin?.data?.insc) {
-            origin = {
-              outpoint: remote.origin.outpoint,
-              insc: { file: remote.origin.data.insc.file },
-              map: remote.origin.data.map,
-              nonce: 0,
-            };
-            if (
-              this.indexMode == IndexMode.TrustAndVerify &&
-              parseMode == ParseMode.Persist &&
-              !origin.insc?.file?.type.startsWith("application/bsv-20")
-            ) {
-              const ancestors = await this.oneSat.getOriginAncestors([txo.outpoint]);
-              let hasAncestor = false;
-              for (const [txid, block] of Object.entries(ancestors)) {
-                ctx.queue[txid] = block;
-                hasAncestor = true;
-              }
-              if (hasAncestor) {
-                ctx.queue[ctx.txid] = ctx.block;
-              }
-            }
-          }
         }
         break;
-      } else if (inSat > outSat) {
+      }
+      satsIn += spend.satoshis;
+      if (satsIn > outSat) {
+        origin.outpoint = txo.outpoint.toString();
         break;
       }
-      inSat += spend.satoshis;
     }
-    if (!origin) {
-      origin = {
-        outpoint: txo.outpoint.toString(),
-        insc: txo.data.insc?.data,
-        nonce: 0,
-      };
-    }
-
     const events: Event[] = [];
     origin.map = {
       ...origin.map || {},
       ...txo.data.map?.data || {},
     };
     if (txo.owner && this.owners.has(txo.owner)) {
-      events.push({ id: "outpoint", value: origin.outpoint.toString() });
+      events.push({ id: "outpoint", value: origin.outpoint?.toString() || "" });
       if (origin.insc?.file?.type) {
         events.push({ id: "type", value: origin.insc.file.type });
       }
     }
+    const file = origin.insc?.file;
+    if (file && file.size && file.size > 4096) {
+      file.content = [];
+    }
     return new IndexData(origin, events, deps);
   }
 
-  async sync(txoStore: TxoStore, ingestQueue: { [txid: string]: Ingest }): Promise<void> {
-    const limit = 100;
-    for await (const owner of this.owners) {
-      let offset = 0;
-      let utxos: Ordinal[] = [];
-      offset = 0;
-
-      do {
-        const url = `https://ordinals.gorillapool.io/api/txos/address/${owner}/unspent?limit=${limit}&offset=${offset}&bsv20=false`;
-        const resp = await fetch(url);
-        utxos = ((await resp.json()) as Ordinal[]) || [];
-        const txos: Txo[] = [];
-        for (const u of utxos) {
-          if (!u.origin?.data?.insc || u.origin?.data?.bsv20) continue;
-          const txo = new Txo(
-            new Outpoint(u.outpoint),
-            1n,
-            new P2PKH().lock(Utils.fromBase58Check(owner).data).toBinary(),
-            TxoStatus.Trusted,
-          );
-          txos.push(txo);
-          if (this.indexMode == IndexMode.Verify) continue;
-          txo.owner = owner;
-          if (u.height) {
-            txo.block = new Block(u.height, BigInt(u.idx || 0));
-          }
-          const origin: Origin = {
-            outpoint: u.origin.outpoint,
-            insc: { file: u.origin.data.insc.file },
-            map: u.origin.data.map,
-          };
-          txo.data[this.tag] = new IndexData(origin, [
-            { id: "outpoint", value: origin.outpoint.toString() },
-          ]);
-
-          if (u.data?.insc) {
-            txo.data.insc = new IndexData(u.data.insc);
-          }
-          if (u.data?.map) {
-            txo.data.map = new IndexData(u.data.map);
-          }
-
-          if (u.data?.list) {
-            const price = BigInt(u.data.list.price);
-            txo.data.list = new IndexData(
-              new Listing(Utils.toArray(u.data.list.payout, "base64"), price),
-              [{ id: "price", value: price.toString(16).padStart(16, "0") }],
-            );
+  async preSave(ctx: IndexContext): Promise<void> {
+    let balance = 0;
+    let hasTag = false;
+    let icon: string | undefined;
+    let id = "";
+    for (const spend of ctx.spends) {
+      if (spend.data[this.tag]) {
+        let origin = spend.data[this.tag].data as Origin;
+        if (spend.owner && this.owners.has(spend.owner)) {
+          hasTag = true;
+          balance--;
+          if (!icon && origin?.insc?.file?.type.startsWith("image/")) {
+            icon = origin?.outpoint;
+            id = origin.map?.name || "";
           }
         }
-
-        if (this.indexMode !== IndexMode.Verify) {
-          await txoStore.storage.putMany(txos);
+      }
+    }
+    for (const txo of ctx.txos) {
+      if (txo.data[this.tag]) {
+        if (txo.owner && this.owners.has(txo.owner)) {
+          hasTag = true;
+          balance++;
+          let origin = txo.data.origin?.data as Origin;
+          if (!icon && origin?.insc?.file?.type.startsWith("image/")) {
+            icon = origin?.outpoint;
+          }
         }
+      }
+    }
+    if (hasTag) {
+      ctx.summary[this.tag] = {
+        id,
+        amount: balance,
+        icon,
+      };
+    }
+  }
 
-        if (this.indexMode !== IndexMode.Trust) {
-          for (const t of txos) {
-            let ingest = ingestQueue[t.outpoint.txid];
+  async resolve(txoStore: TxoStore, block: BlockHeader): Promise<void> {
+    if (this.indexMode === IndexMode.Verify) return;
+    const results = await txoStore.search(new TxoLookup(this.tag, 'outpoint', ':', undefined, true), TxoSort.ASC, 1000)
+
+    const ingestQueue: {[txid: string]:Ingest} = {};
+    const originOutpoints = new Set<string>();
+    for (const txo of results.txos) {
+      const originData = txo.data.origin;
+      originData.events = originData?.events.filter(e => e.id != "outpoint");
+      const origin = originData?.data as Origin;
+      if (!origin?.outpoint) {
+        const remote = await this.oneSat.getTxo(txo.outpoint);
+        if (remote?.data?.origin?.outpoint) {
+          origin.outpoint = remote?.data?.origin?.outpoint;
+          if (this.indexMode == IndexMode.Trust) {
+            const file = await this.oneSat.getInscriptionFile(origin.outpoint);
+            origin.insc = {file};
+            origin.map = remote.data.origin.map;
+            origin.nonce = (remote.data.origin.nonce || 0) + 1;
+            originData.events.push({ id: "outpoint", value: origin.outpoint });
+            await txoStore.storage.put(txo)
+          } else if (this.indexMode == IndexMode.TrustAndVerify) {
+            let ingest = ingestQueue[txo.outpoint.txid];
+            originOutpoints.add(origin.outpoint);
             if (!ingest) {
               ingest = {
-                txid: t.outpoint.txid,
-                height: t.block.height,
-                source: "origin",
-                idx: Number(t.block.idx),
+                txid: txo.outpoint.txid,
+                height: txo.block.height,
+                idx: Number(txo.block.idx),
                 parseMode: ParseMode.Persist,
-                outputs: [t.outpoint.vout],
+                outputs: [txo.outpoint.vout],
+                source: "origin",
+                reprocess: true,
               };
-              ingestQueue[t.outpoint.txid] = ingest;
+              ingestQueue[txo.outpoint.txid] = ingest;
             } else {
-              ingest.outputs!.push(t.outpoint.vout);
-              ingest.parseMode = ParseMode.Persist;
+              ingest.outputs!.push(txo.outpoint.vout);
             }
           }
         }
-        if (this.indexMode == IndexMode.Verify) {
-          const ancestors = await this.oneSat.getOriginAncestors(
-            txos.map((t) => t.outpoint),
-          );
-          for (const [txid, block] of Object.entries(ancestors)) {
-            if (ingestQueue[txid]) continue
-            ingestQueue[txid] = {
-              txid,
-              height: block.height,
-              source: "ancestor",
-              idx: Number(block.idx),
-              parseMode: ParseMode.Dependency,
-            };
+      }
+    }
+    if (this.indexMode == IndexMode.TrustAndVerify) {
+      const ancestors = await this.oneSat.getOriginAncestors([...originOutpoints]);
+      for (const ancestor of ancestors) {
+        const [txid, vout] = ancestor.outpoint.split("_");
+        let ingest = ingestQueue[txid];
+        if (!ingest) {
+          ingest = {
+            txid: txid,
+            height: ancestor.height,
+            idx: Number(ancestor.idx),
+            parseMode: ParseMode.Persist,
+            outputs: [parseInt(vout)],
+            source: 'ancestor',
+            reprocess: true,
           }
+          ingestQueue[txid] = ingest;
+        } else {
+          ingest.outputs!.push(parseInt(vout));
         }
-        offset += limit;
-      } while (utxos.length == limit);
+      }
+      const ingests = Object.values(ingestQueue);
+      if (ingests.length > 0) {
+        await txoStore.queue(ingests);
+      }
     }
   }
 }

@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.44**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / LockTemplate
+[spv-store v0.1.44](../globals.md) / LockTemplate
 
 # Class: LockTemplate
 
@@ -44,7 +44,7 @@ Block height when unlockable
 
 #### Defined in
 
-[templates/lock.ts:31](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/templates/lock.ts#L31)
+[templates/lock.ts:30](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/templates/lock.ts#L30)
 
 ***
 
@@ -98,4 +98,4 @@ Block height when unlockable
 
 #### Defined in
 
-[templates/lock.ts:41](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/templates/lock.ts#L41)
+[templates/lock.ts:40](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/templates/lock.ts#L40)

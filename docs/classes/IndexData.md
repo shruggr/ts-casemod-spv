@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.44**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / IndexData
+[spv-store v0.1.44](../globals.md) / IndexData
 
 # Class: IndexData
 
@@ -37,7 +37,7 @@ An array of outpoints that this output depends on.
 
 #### Defined in
 
-[models/index-data.ts:16](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/index-data.ts#L16)
+[models/index-data.ts:16](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-data.ts#L16)
 
 ## Properties
 
@@ -49,7 +49,7 @@ An arbitrary data object to be used by the indexer to store parsed data.
 
 #### Defined in
 
-[models/index-data.ts:17](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/index-data.ts#L17)
+[models/index-data.ts:17](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-data.ts#L17)
 
 ***
 
@@ -61,7 +61,7 @@ An array of outpoints that this output depends on.
 
 #### Defined in
 
-[models/index-data.ts:17](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/index-data.ts#L17)
+[models/index-data.ts:17](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-data.ts#L17)
 
 ***
 
@@ -73,4 +73,4 @@ An array of events emitted by the indexer in regard to the output. Events can be
 
 #### Defined in
 
-[models/index-data.ts:17](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/index-data.ts#L17)
+[models/index-data.ts:17](https://github.com/bitcoin-sv/spv-store/blob/e3a78734f6050d5b58a2dfc50b2ef9975d4564de/src/models/index-data.ts#L17)

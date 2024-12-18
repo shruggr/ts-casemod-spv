@@ -7,17 +7,18 @@ import {
 } from "@bsv/sdk";
 import type { TxoLookup, TxoResults } from "./models/search";
 import {
-  TxLog,
+  type AccountService,
   type BlockHeaderService,
   type BroadcastService,
-  type InventoryService,
   type TxnService,
+  type TxSyncLog,
 } from "./services";
 import type { BlockStore, Txn, TxnStore, TxoStore } from "./stores";
 import {
   blockHeaderFromReader,
   Outpoint,
   ParseMode,
+  TxLog,
   Txo,
   TxoSort,
   type BlockHeader,
@@ -29,10 +30,10 @@ import { EventEmitter } from "./lib/event-emitter";
 export type Network = "mainnet" | "testnet";
 
 export interface Services {
+  account?: AccountService;
   blocks: BlockHeaderService;
-  txns: TxnService;
+  txns?: TxnService;
   broadcast: BroadcastService;
-  inv: InventoryService;
 }
 
 export interface Stores {
@@ -47,7 +48,8 @@ export class SPVStore {
     public services: Services,
     public stores: Stores,
     public events = new EventEmitter(),
-    startSync = false
+    startSync = false,
+    public subscribe = false
   ) {
     if (startSync) this.sync();
   }
@@ -70,9 +72,10 @@ export class SPVStore {
   async broadcast(
     tx: Transaction,
     source = "",
+    isBeefy = false
   ): Promise<BroadcastResponse | BroadcastFailure> {
     let resp: BroadcastResponse | BroadcastFailure;
-    if(!tx.merklePath) {
+    if (!tx.merklePath) {
       resp = await this.stores.txns!.broadcast(tx);
     } else {
       resp = {
@@ -82,7 +85,7 @@ export class SPVStore {
       }
     }
     if (isBroadcastResponse(resp)) {
-      await this.stores.txos!.ingest(tx, source, ParseMode.Persist, true)
+      await this.stores.txos!.ingest(tx, source, isBeefy ? ParseMode.Deep : ParseMode.Persist, true)
     }
     return resp;
 
@@ -91,28 +94,45 @@ export class SPVStore {
   async sync(): Promise<void> {
     await this.stores.blocks!.sync(true);
     this.events.emit("blocksSynced");
-    const tip = await this.getSyncedBlock();
-    const isSynced = await this.stores.txos!.storage.getState("syncHeight");
+    await this.services.account?.register([...this.stores.txos?.owners || []]);
+    const isSynced = await this.stores.txos!.storage.getState("lastSync");
+    
+    console.log("Syncing wallet", isSynced);
     if (!isSynced) {
       const ingestQueue: { [txid: string]: Ingest } = {};
+      let lastSync = 0;
       for (const indexer of this.stores.txos!.indexers) {
         this.events.emit("importing", {tag: indexer.tag, name: indexer.name});
-        await indexer.sync(this.stores.txos!, ingestQueue);
+        const score = await indexer.sync(this.stores.txos!, ingestQueue);
+        lastSync = Math.max(lastSync, score);
       }
-      this.stores.txos?.queue(Object.values(ingestQueue));
-      for (const owner of this.stores.txos!.owners) {
-        await this.stores.txos!.storage.setState(
-          `sync-${owner}`,
-          tip!.height.toString()
-        );
-      }
-      await this.stores.txos!.storage.setState(
-        "syncHeight",
-        tip!.height.toString()
-      );
+      await this.stores.txos?.queue(Object.values(ingestQueue));
+      await this.stores.txos!.storage.setState("lastSync", lastSync.toString());
       this.events.emit("txosSynced");
     }
-    this.stores.blocks!.sync();
+    
+    // This does not work in a service worker and should be disabled
+    if (this.subscribe) {
+      this.services.account?.subscribe(async (topic, data: string) => {
+        switch (topic) {
+          case "tx":
+            const txSyncLog = JSON.parse(data) as TxSyncLog;
+            this.stores.txos!.queue([{
+              txid: txSyncLog.txid,
+              height: Number(txSyncLog.height),
+              idx: Number(txSyncLog.idx || 0),
+              outputs: txSyncLog.outs,
+              source: "sync",
+              parseMode: ParseMode.Persist,
+            }])
+            break;
+          case "block":
+            this.stores.blocks!.sync(true);
+            break;
+        }
+      });
+    }
+    this.stores.blocks!.sync(false);
     this.stores.txns!.processQueue();
     this.stores.txos!.processQueue();
     await this.stores.txos!.syncTxLogs();
@@ -121,6 +141,10 @@ export class SPVStore {
       () => this.stores.txos!.syncTxLogs(),
       60 * 1000
     );
+    this.stores.txos!.resolveBlock();
+    this.events.on("syncedBlockHeight", async () => {
+      this.stores.txos!.resolveBlock();
+    });
   }
 
   async search(
@@ -147,8 +171,8 @@ export class SPVStore {
     return this.stores.txns!.loadTx(txid, fromRemote);
   }
 
-  async getRecentTxs(): Promise<TxLog[]> {
-    return this.stores.txos!.storage.getRecentTxLogs(10);
+  async getRecentTxs(limit = 100): Promise<TxLog[]> {
+    return this.stores.txos!.storage.getRecentTxLogs(limit);
   }
 
   async parseTx(tx: Transaction): Promise<IndexContext> {
@@ -232,7 +256,7 @@ export class SPVStore {
       );
     }
     await this.stores.txos!.storage.setState(
-      "syncHeight",
+      "lastSync",
       lastHeight.toString()
     );
   }

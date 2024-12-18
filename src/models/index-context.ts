@@ -10,16 +10,39 @@ export type IndexQueue = { [txid: string]: Block };
  * @typedef {Object} IndexSummary
  * @property {Object.<string, {id?: string, amount?: bigint, icon?: string}>} [tag] - A mapping of tags to their respective metadata.
  * @property {string} [tag.id] - An optional identifier for the tag.
- * @property {bigint} [tag.amount] - An optional amount associated with the tag.
+ * @property {number} [tag.amount] - An optional amount associated with the tag.
  * @property {string} [tag.icon] - Outpoint of optional icon associated with the tag. Can be ordinal or B protocol
+ * @property {any} [tag.data] - Optional data associated with the tag.
  */
 export type IndexSummary = {
   [tag: string]: {
     id?: string;
-    amount?: bigint;
+    amount?: number;
     icon?: string;
+    data?: any;
   }
 };
+
+/**
+ * Represents a log of indexed transactions.
+ * 
+ * @class TxLog
+ * 
+ * @property {IndexSummary} [summary] - The summary of the indexed transaction.
+ * @property {string} [source] - The source of the indexed transaction.
+ * @property {string} txid - The unique identifier of the transaction.
+ * @property {number} [height] - The height of the block containing the transaction.
+ * @property {number} [idx] - The index of the transaction in the block.
+ */
+export class TxLog {
+  summary?: IndexSummary
+  source?: string
+  constructor(
+    public txid: string,
+    public height: number = 0,
+    public idx = 0,
+  ) { }
+}
 
 
 

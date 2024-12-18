@@ -1,13 +1,10 @@
 
 import type { IndexContext } from "../models/index-context";
 import { IndexData } from "../models/index-data";
-import { Indexer, IndexMode, ParseMode } from "../models/indexer";
-import { Txo, TxoStatus } from "../models/txo";
-import { Hash, HD, Utils } from "@bsv/sdk";
-import { TxoStore } from "../stores/txo-store";
-import { Outpoint, type Ingest } from "../models";
-import type { RemoteBsv20 } from "./remote-types";
-import { Bsv20Status, deriveFundAddress, FEE_XPUB } from "./bsv20";
+import { Indexer, IndexMode } from "../models/indexer";
+import { Txo } from "../models/txo";
+import { Utils } from "@bsv/sdk";
+import { Bsv20Status, deriveFundAddress } from "./bsv20";
 import { OneSatProvider } from "../providers/1sat-provider";
 import type { Network } from "../spv-store";
 
@@ -97,19 +94,27 @@ export class Bsv21Indexer extends Indexer {
   }
 
   async preSave(ctx: IndexContext) {
+    if (this.indexMode == IndexMode.Trust) return;
     const balance: { [id: string]: bigint } = {};
     const tokensIn: { [id: string]: Txo[] } = {};
+    let summaryToken: Bsv21 | undefined;
+    let summaryBalance = 0;
+    let hasPending = false;
     for (const spend of ctx.spends) {
       const bsv21 = spend.data.bsv21;
       if (!bsv21) continue;
-      if (bsv21.data.status != Bsv20Status.Valid && this.indexMode == IndexMode.Trust) {
-        const remote = await this.provider.getBsv2021Txo(spend.outpoint);
-        if (remote) {
-          bsv21.data.status = remote.status;
-          bsv21.data.sym = remote.sym;
-          bsv21.data.icon = remote.icon;
-          bsv21.data.dec = remote.dec;
-        }
+      // if (bsv21.data.status != Bsv20Status.Valid && this.indexMode == IndexMode.Trust) {
+      //   const remote = await this.provider.getBsv2021Txo(spend.outpoint);
+      //   if (remote) {
+      //     bsv21.data.status = remote.status;
+      //     bsv21.data.sym = remote.sym;
+      //     bsv21.data.icon = remote.icon;
+      //     bsv21.data.dec = remote.dec;
+      //   }
+      // }
+      if (!summaryToken) summaryToken = bsv21.data as Bsv21;
+      if (bsv21.data.id == summaryToken.id && spend.owner && this.owners.has(spend.owner)) {
+        summaryBalance -= Number(bsv21.data.amt)
       }
       if (bsv21.data.status == Bsv20Status.Pending) {
         for (const txo of ctx.txos) {
@@ -121,7 +126,7 @@ export class Bsv21Indexer extends Indexer {
             outBsv21.data.dec = bsv21.data.dec;
           }
         }
-        return
+        hasPending = true;
       } else if (bsv21.data.status == Bsv20Status.Valid) {
         if (!tokensIn[bsv21.data.id]) {
           tokensIn[bsv21.data.id] = [];
@@ -144,6 +149,10 @@ export class Bsv21Indexer extends Indexer {
       if ((balance[bsv21.data.id] || 0n) < bsv21.data.amt) {
         reasons[bsv21.data.id] = "Insufficient inputs";
       }
+      if (!summaryToken) summaryToken = bsv21.data as Bsv21;
+      if (bsv21.data.id == summaryToken?.id && txo.owner && this.owners.has(txo.owner)) {
+        summaryBalance += Number(bsv21.data.amt)
+      }
 
       if (token) {
         bsv21.data.sym = token.sym;
@@ -161,127 +170,22 @@ export class Bsv21Indexer extends Indexer {
         (balance[bsv21.data.id] || 0n) - BigInt(bsv21.data.amt);
     }
 
-    for (const [id, txos] of Object.entries(tokensOut)) {
-      const reason = reasons[id];
-      for (const txo of txos) {
-        txo.data.bsv21.data.status = reason
-          ? Bsv20Status.Invalid
-          : Bsv20Status.Valid;
-        txo.data.bsv21.data.reason = reason;
+    if (!hasPending) {
+      for (const [id, txos] of Object.entries(tokensOut)) {
+        const reason = reasons[id];
+        for (const txo of txos) {
+          txo.data.bsv21.data.status = reason
+            ? Bsv20Status.Invalid
+            : Bsv20Status.Valid;
+          txo.data.bsv21.data.reason = reason;
+        }
       }
     }
-  }
-
-  async sync(txoStore: TxoStore, ingestQueue: { [txid: string]: Ingest }): Promise<void> {
-    const limit = 100;
-    for await (const owner of this.owners) {
-      let resp = await fetch(
-        `https://ordinals.gorillapool.io/api/bsv20/${owner}/balance`,
-      );
-      const balance = (await resp.json()) as RemoteBsv20[];
-      for await (const token of balance) {
-        if (!token.id) continue;
-        console.log("importing", token.id);
-        // try {
-        let offset = 0;
-        let utxos: RemoteBsv20[] = [];
-        do {
-          resp = await fetch(
-            `https://ordinals.gorillapool.io/api/bsv20/${owner}/id/${token.id}?limit=${limit}&offset=${offset}&includePending=true`,
-          );
-          utxos = ((await resp.json()) as RemoteBsv20[]) || [];
-          const txos: Txo[] = [];
-          for (const u of utxos) {
-            const txo = new Txo(
-              new Outpoint(u.txid, u.vout),
-              1n,
-              Utils.toArray(u.script, "base64"),
-              TxoStatus.Trusted,
-            );
-            if (u.height) {
-              txo.block = { height: u.height, idx: BigInt(u.idx || 0) };
-            }
-            txo.data[this.tag] = new IndexData(
-              Bsv21.fromJSON({
-                id: token.id,
-                amt: u.amt,
-                dec: token.dec,
-                sym: token.sym,
-                op: u.op!,
-                status: u.status,
-                icon: token.icon,
-                fundAddress: deriveFundAddress(new Outpoint(token.id).toBEBinary())
-                // contract: token.contract
-              }),
-              [
-                { id: "address", value: owner },
-                { id: "id", value: token.id!.toString() },
-              ],
-            );
-            if (u.listing && u.payout && u.price) {
-              const price = BigInt(u.price);
-              txo.data.list = new IndexData(
-                {
-                  payout: Utils.toArray(u.payout, "base64"),
-                  price,
-                },
-                [
-                  {
-                    id: "price",
-                    value: price.toString(16).padStart(16, "0"),
-                  },
-                ],
-              );
-            }
-            txos.push(txo);
-          }
-          if (this.indexMode !== IndexMode.Verify) {
-            await txoStore.storage.putMany(txos);
-          }
-
-          if (this.indexMode !== IndexMode.Trust) {
-            for (const t of txos) {
-              let ingest = ingestQueue[t.outpoint.txid];
-              if (!ingest) {
-                ingest = {
-                  txid: t.outpoint.txid,
-                  height: t.block.height,
-                  source: "bsv21",
-                  idx: Number(t.block.idx),
-                  parseMode: ParseMode.Persist,
-                  outputs: [t.outpoint.vout],
-                };
-                ingestQueue[t.outpoint.txid] = ingest;
-              } else {
-                ingest.outputs!.push(t.outpoint.vout);
-              }
-            }
-          }
-          // if (this.indexMode !== IndexMode.Verify) {
-          //   resp = await fetch(
-          //     `https://ordinals.gorillapool.io/api/bsv20/${owner}/id/${token.id}/ancestors`,
-          //   );
-          //   const txids = (await resp.json()) as { [score: string]: string };
-          //   for (const [score, txid] of Object.entries(txids)) {
-          //     const [height, idx] = score.split(".");
-          //     let ingest = ingestQueue[txid];
-          //     if (!ingest) {
-          //       ingest = {
-          //         txid,
-          //         height: parseInt(height),
-          //         source: "bsv21",
-          //         idx: Number(idx),
-          //         parseMode: ParseMode.Dependency,
-          //       };
-          //       ingestQueue[t.outpoint.txid] = ingest;
-          //     } else {
-          //       ingest.outputs!.push(t.outpoint.vout);
-          //     }
-          //   }
-          // }
-
-          offset += limit;
-        } while (utxos.length == limit);
+    if (summaryToken) {
+      ctx.summary[this.tag] = {
+        id: summaryToken.sym,
+        amount: summaryBalance / Math.pow(10, summaryToken.dec || 0),
+        icon: summaryToken.icon
       }
     }
   }
