@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / Origin
+[spv-store v0.1.73](../globals.md) / Origin
 
 # Interface: Origin
 
@@ -14,7 +14,7 @@
 
 #### Defined in
 
-[indexers/origin.ts:25](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L25)
+[indexers/origin.ts:22](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L22)
 
 ***
 
@@ -28,7 +28,7 @@
 
 #### Defined in
 
-[indexers/origin.ts:26](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L26)
+[indexers/origin.ts:23](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L23)
 
 ***
 
@@ -38,14 +38,24 @@
 
 #### Defined in
 
-[indexers/origin.ts:24](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L24)
+[indexers/origin.ts:21](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L21)
 
 ***
 
-### outpoint
+### outpoint?
 
-> **outpoint**: `string`
+> `optional` **outpoint**: `string`
 
 #### Defined in
 
-[indexers/origin.ts:23](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L23)
+[indexers/origin.ts:20](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L20)
+
+***
+
+### sigma?
+
+> `optional` **sigma**: `Sigma`[]
+
+#### Defined in
+
+[indexers/origin.ts:24](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L24)

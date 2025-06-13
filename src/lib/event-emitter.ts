@@ -39,7 +39,10 @@ export class EventEmitter {
       return;
     }
 
-    [...this.events[event]].forEach((listener) => listener.apply(this, args));
+    [...this.events[event]].forEach((listener) => {
+      listener.apply(this, args)
+    });
+    [...(this.events['message'] || [])].forEach((listener) => listener.apply(this, args));
   }
 
   public once(event: string, listener: Listener): () => void {

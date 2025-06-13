@@ -1,110 +1,102 @@
-import type { IndexContext } from "../models/index-context";
+import type { IndexContext, IndexSummary } from "../models/index-context";
 import { parseAddress } from "../models/address";
-import { P2PKH, Utils } from "@bsv/sdk";
 import {
   type Event,
   Indexer,
-  IndexData,
-  Txo,
-  TxoStatus,
-  Outpoint,
+  type IndexData,
   type Ingest,
-  IndexMode,
+  Outpoint,
   ParseMode,
 } from "../models";
-import type { Ordinal } from "./remote-types";
 import type { TxoStore } from "../stores";
+import { OneSatProvider } from "../providers";
+import type { Network } from "../spv-store";
 
 export class FundIndexer extends Indexer {
   tag = "fund";
   name = "Funds";
 
+  constructor(
+      public owners = new Set<string>(),
+      public network: Network = "mainnet",
+      public syncHistory = false,
+    ) {
+      super(owners, network);
+    }
+
   async parse(ctx: IndexContext, vout: number): Promise<IndexData | undefined> {
     const txo = ctx.txos[vout];
     const script = ctx.tx.outputs[vout].lockingScript;
-    txo.owner = parseAddress(script, 0, this.network);
+    const address = parseAddress(script, 0, this.network);
     if (txo.satoshis < 2n) return;
     const events: Event[] = [];
-    if (txo.owner && this.owners.has(txo.owner)) {
-      events.push({ id: "address", value: txo.owner });
+    txo.owner = address;
+    if (address && this.owners.has(address)) {
+      events.push({ id: "address", value: address });
+      return {
+        data: txo.owner,
+        events,
+      };
     }
-    return new IndexData(txo.owner, events);
   }
 
-  async preSave(ctx: IndexContext): Promise<void> {
-    let satsIn = ctx.spends.reduce((acc, spends) => {
-      if (!spends.data[this.tag]) return acc;
-      return acc + (spends.owner && this.owners.has(spends.owner) ?
-        spends.satoshis :
-        0n);
-    }, 0n);
-    let satsOut = ctx.txos.reduce((acc, txo) => {
+  async summerize(ctx: IndexContext, parseMode: ParseMode, outputs?: Set<number>): Promise<IndexSummary | undefined> {
+    let satsOut = 0n
+    let satsIn = 0n;
+    for (let spend of ctx.spends.values()) {
+      if (!spend.script.length) {
+        return
+      }
+      if (spend.data[this.tag]) {
+        satsOut += (spend.owner && this.owners.has(spend.owner) ?
+          spend.satoshis :
+          0n);
+      }
+    };
+    satsIn = ctx.txos.reduce((acc, txo) => {
       if (!txo.data[this.tag]) return acc;
       return acc + (txo.owner && this.owners.has(txo.owner) ?
         txo.satoshis :
         0n);
     }, 0n);
-    const balance = satsIn - satsOut;
-    if (balance != 0n) {
-      ctx.summary[this.tag] = {
+
+    const balance = Number(satsIn - satsOut);
+    if (balance) {
+      return {
         amount: balance,
       };
     }
   }
 
-  async sync(txoStore: TxoStore, ingestQueue: { [txid: string]: Ingest }): Promise<void> {
-    const limit = 10000;
-    for await (const owner of this.owners) {
-      let offset = 0;
-      let utxos: Ordinal[] = [];
-      do {
-        const resp = await fetch(
-          `https://ordinals.gorillapool.io/api/txos/address/${owner}/unspent?limit=${limit}&offset=${offset}`,
-        );
-        utxos = ((await resp.json()) as Ordinal[]) || [];
-        const txos: Txo[] = [];
-        for (const u of utxos) {
-          if (u.satoshis < 2) continue;
-          const txo = new Txo(
-            new Outpoint(u.outpoint),
-            BigInt(u.satoshis),
-            new P2PKH().lock(Utils.fromBase58Check(owner).data).toBinary(),
-            TxoStatus.Trusted,
-          );
-          txos.push(txo);
-          if (this.indexMode === IndexMode.Verify) continue;
-          txo.owner = owner;
-          if (u.height) {
-            txo.block = { height: u.height, idx: BigInt(u.idx || 0) };
-          }
-          txo.data[this.tag] = new IndexData(owner, [{ id: "address", value: owner }]);
+  async sync(txoStore: TxoStore, ingestQueue: { [txid: string]: Ingest }, parseMode = ParseMode.PersistSummary): Promise<number> {
+    const oneSat = new OneSatProvider(this.network, txoStore.services.account?.accountId || '');
+    let maxScore = 0;
+    for (const address of txoStore.owners) {
+      const utxos = await oneSat.txosByAddress(address, !this.syncHistory);
+      console.log("Syncing", utxos.length, "utxos for ", [...txoStore.owners]);
+      for (const u of utxos) {
+        if (u.satoshis < 2 || u.data?.lock) continue;
+        const outpoint = new Outpoint(u.outpoint);
+        let ingest = ingestQueue[outpoint.txid];
+        if (!ingest) {
+          ingest = {
+            txid: outpoint.txid,
+            height: u.height || Date.now(),
+            source: "1sat",
+            idx: u.idx || 0,
+            parseMode,
+            outputs: [],
+          };
+          ingestQueue[outpoint.txid] = ingest;
         }
-
-        if (this.indexMode !== IndexMode.Verify) {
-          await txoStore.storage.putMany(txos);
+        if (!u.spend) {
+          ingest.outputs!.push(outpoint.vout);
         }
-
-        if (this.indexMode !== IndexMode.Trust) {
-          for (const t of txos) {
-            let ingest = ingestQueue[t.outpoint.txid];
-            if (!ingest) {
-              ingest = {
-                txid: t.outpoint.txid,
-                height: t.block.height,
-                source: "fund",
-                idx: Number(t.block.idx),
-                parseMode: ParseMode.Persist,
-                outputs: [t.outpoint.vout],
-              };
-              ingestQueue[t.outpoint.txid] = ingest;
-            } else {
-              ingest.outputs!.push(t.outpoint.vout);
-              ingest.parseMode = ParseMode.Persist;
-            }
-          }
+        if (u.height < 50000000) {
+          maxScore = Math.max(maxScore, u.height * 1e9 + u.idx);
         }
-        offset += limit;
-      } while (utxos.length == 100);
+      }
     }
+    return maxScore;
   }
 }

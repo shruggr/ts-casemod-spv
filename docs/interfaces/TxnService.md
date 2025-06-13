@@ -1,16 +1,34 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / TxnService
+[spv-store v0.1.73](../globals.md) / TxnService
 
 # Interface: TxnService
 
 ## Methods
 
+### fetchBeef()
+
+> **fetchBeef**(`txid`): `Promise`\<`Transaction`\>
+
+#### Parameters
+
+• **txid**: `string`
+
+#### Returns
+
+`Promise`\<`Transaction`\>
+
+#### Defined in
+
+[services/txn-service.ts:5](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/services/txn-service.ts#L5)
+
+***
+
 ### fetchProof()
 
-> **fetchProof**(`txid`): `Promise`\<`undefined` \| `number`[]\>
+> **fetchProof**(`txid`): `Promise`\<`undefined` \| `MerklePath`\>
 
 #### Parameters
 
@@ -18,44 +36,8 @@
 
 #### Returns
 
-`Promise`\<`undefined` \| `number`[]\>
+`Promise`\<`undefined` \| `MerklePath`\>
 
 #### Defined in
 
-[services/txn-service.ts:7](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/txn-service.ts#L7)
-
-***
-
-### fetchTxn()
-
-> **fetchTxn**(`txid`): `Promise`\<[`Txn`](Txn.md)\>
-
-#### Parameters
-
-• **txid**: `string`
-
-#### Returns
-
-`Promise`\<[`Txn`](Txn.md)\>
-
-#### Defined in
-
-[services/txn-service.ts:5](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/txn-service.ts#L5)
-
-***
-
-### fetchTxns()
-
-> **fetchTxns**(`txids`): `Promise`\<[`Txn`](Txn.md)[]\>
-
-#### Parameters
-
-• **txids**: `string`[]
-
-#### Returns
-
-`Promise`\<[`Txn`](Txn.md)[]\>
-
-#### Defined in
-
-[services/txn-service.ts:6](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/txn-service.ts#L6)
+[services/txn-service.ts:6](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/services/txn-service.ts#L6)

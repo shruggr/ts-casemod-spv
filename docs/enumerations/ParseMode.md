@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / ParseMode
+[spv-store v0.1.73](../globals.md) / ParseMode
 
 # Enumeration: ParseMode
 
@@ -14,11 +14,23 @@ Enum representing the different modes of indexing.
 
 > **Dependency**: `1`
 
-Parse as dependency.
+Parse as dependency. Supress events.
 
 #### Defined in
 
-[models/indexer.ts:16](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L16)
+[models/indexer.ts:29](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L29)
+
+***
+
+### OutputsOnly
+
+> **OutputsOnly**: `-1`
+
+Parse outputs only.
+
+#### Defined in
+
+[models/indexer.ts:25](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L25)
 
 ***
 
@@ -30,7 +42,19 @@ Parse and queue all dependencies for ingestion.
 
 #### Defined in
 
-[models/indexer.ts:18](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L18)
+[models/indexer.ts:31](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L31)
+
+***
+
+### PersistSummary
+
+> **PersistSummary**: `3`
+
+Process source transaction tree
+
+#### Defined in
+
+[models/indexer.ts:33](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L33)
 
 ***
 
@@ -38,8 +62,8 @@ Parse and queue all dependencies for ingestion.
 
 > **Preview**: `0`
 
-Parse for preview. Do not load dependencies.
+Parse for preview. Do not save.
 
 #### Defined in
 
-[models/indexer.ts:14](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L14)
+[models/indexer.ts:27](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L27)

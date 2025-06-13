@@ -55,7 +55,7 @@ export class TxnStore {
     public services: Services,
     public stores: Stores,
     public events?: EventEmitter
-  ) {}
+  ) { }
 
   async destroy() {
     this.stopSync = true;
@@ -75,26 +75,64 @@ export class TxnStore {
     return resp;
   }
 
+  async populateTx(tx: Transaction, persist = true): Promise<void> {
+    const txid = tx.id("hex");
+    if (!tx.merklePath || (await tx.merklePath.verify(txid, this.stores.blocks!))) {
+      tx.merklePath = await this.services.txns!.fetchProof(tx.id("hex"));
+    }
+    if (tx.merklePath) {
+      if ((await tx.merklePath.verify(txid, this.stores.blocks!))) {
+        return;
+      } else {
+        throw new Error("Invalid merkle proof");
+      }
+    } else {
+      for (const input of tx.inputs) {
+        if (input.sourceTXID) {
+          input.sourceTransaction = await this.loadTx(input.sourceTXID, persist)
+        }
+      }
+    }
+  }
+
   async loadTx(
     txid: string,
-    fromRemote = false
-  ): Promise<Transaction | undefined> {
+    persist = true
+  ): Promise<Transaction> {
     let txn = await this.storage.get(txid);
-    let saveTx = false;
-    if (!txn && fromRemote) {
+    if (!txn) {
       this.events?.emit("fetchingTx", { txid });
-      txn = await this.services.txns.fetchTxn(txid);
-      saveTx = !!txn;
+      const tx = await this.services.txns!.fetchBeef(txid);
+      if(persist) {
+        await this.saveTx(tx);
+      }
+      return tx;
+    } else {
+      const tx = Transaction.fromBinary(txn.rawtx);
+      if (txn.proof) {
+        tx.merklePath = MerklePath.fromBinary(txn.proof);
+        if ((await tx.merklePath.verify(txn.txid, this.stores.blocks!))) {
+          return tx
+        }
+        tx.merklePath = await this.services.txns?.fetchProof(txn.txid);
+      } else {
+        tx.merklePath = await this.services.txns?.fetchProof(txn.txid);
+      }
+      if (tx.merklePath) {
+        if ((await tx.merklePath.verify(txn.txid, this.stores.blocks!))) {
+          return tx
+        } else {
+          throw new Error("Invalid merkle proof");
+        }
+      } else {
+        for (const input of tx.inputs) {
+          if (input.sourceTXID) {
+            input.sourceTransaction = await this.loadTx(input.sourceTXID, persist)
+          }
+        }
+      }
+      return tx;
     }
-    if (!txn) return;
-    const tx = Transaction.fromBinary(txn.rawtx);
-    if (txn.proof) {
-      tx.merklePath = MerklePath.fromBinary(txn.proof);
-    }
-    if (saveTx) {
-      await this.saveTx(tx);
-    }
-    return tx;
   }
 
   async saveTx(tx: Transaction) {
@@ -105,13 +143,15 @@ export class TxnStore {
       status: TxnStatus.BROADCASTED,
     };
     if (tx.merklePath) {
-      // if (!(await tx.merklePath.verify(txn.txid, this.stores.blocks!))) {
-      //   throw new Error("Invalid merkle path");
-      // }
+      const verified = await tx.merklePath.verify(txn.txid, this.stores.blocks!);
+      // console.log("Verified", verified);
+      if (!verified) {
+        throw new Error("Invalid merkle proof");
+      }
       txn.proof = tx.merklePath!.toBinary();
       txn.block.height = tx.merklePath!.blockHeight;
       txn.block.idx = BigInt(
-        tx.merklePath!.path[0].find((p) => p.hash == txn.txid)?.offset!
+        tx.merklePath!.path[0].find((p) => p.hash == txn.txid)?.offset || 0
       );
       txn.status = TxnStatus.CONFIRMED;
     }
@@ -123,7 +163,7 @@ export class TxnStore {
     this.syncRunning = Promise.all([
       this.processMempool(),
       this.processConfirmed(),
-    ]).then(() => {});
+    ]).then(() => { });
   }
 
   async processMempool(): Promise<void> {
@@ -135,13 +175,12 @@ export class TxnStore {
       );
       if (txns.length) {
         for (const txn of txns) {
-          this.events?.emit("fetchingTx", { txid: txn.txid });
-          const proof = await this.services.txns.fetchProof(txn.txid);
-          if (!proof) {
+          // this.events?.emit("fetchingTx", { txid: txn.txid });
+          const merklePath = await this.services.txns?.fetchProof(txn.txid);
+          if (!merklePath) {
             txn.block.height = Date.now();
             continue;
           }
-          const merklePath = MerklePath.fromBinary(proof);
           if (await merklePath.verify(txn.txid, this.stores.blocks!)) {
             txn.block.height = merklePath.blockHeight;
             txn.block.idx = BigInt(
@@ -177,21 +216,31 @@ export class TxnStore {
       );
       if (txns.length) {
         for (const txn of txns) {
-          let merklePath = MerklePath.fromBinary(txn.proof!);
-          if (await merklePath.verify(txn.txid, this.stores.blocks!)) {
+          let merklePath: MerklePath | undefined = MerklePath.fromBinary(txn.proof!);
+          let verified = false;
+          try {
+            verified = await merklePath.verify(txn.txid, this.stores.blocks!);
+          } catch {
+            console.error("Failed to verify merkle path:", txn.txid);
+          }
+          if (verified) {
             txn.status = TxnStatus.IMMUTABLE;
             continue;
           }
-          this.events?.emit("fetchingTx", { txid: txn.txid });
-          const proof = await this.services.txns.fetchProof(txn.txid);
-          if (proof) {
-            merklePath = MerklePath.fromBinary(proof);
-            if (await merklePath.verify(txn.txid, this.stores.blocks!)) {
+          // this.events?.emit("fetchingTx", { txid: txn.txid });
+          merklePath = await this.services.txns!.fetchProof(txn.txid);
+          if (merklePath) {
+            try {
+              verified = await merklePath.verify(txn.txid, this.stores.blocks!)
+            } catch {
+              console.error("Failed to verify merkle path:", txn.txid);
+            }
+            if (verified) {
               txn.block.height = merklePath!.blockHeight;
               txn.block.idx = BigInt(
-                merklePath!.path[0].find((p) => p.hash == txn.txid)?.offset || 0
+                merklePath.path[0].find((p) => p.hash == txn.txid)?.offset || 0
               );
-              txn.proof = proof;
+              txn.proof = merklePath.toBinary();
               if (txn.block.height <= chaintip!.height - 5) {
                 txn.status = TxnStatus.IMMUTABLE;
               }
@@ -214,27 +263,27 @@ export class TxnStore {
     return this.processConfirmed();
   }
 
-  async ensureTxns(txids: string[]) {
-    console.log("Downloading", txids.length, "txs");
-    const exists = await this.storage.exists(txids);
-    const missing: { [txid: string]: boolean } = {};
-    for (const [i, txid] of txids.entries()) {
-      if (!exists[i]) await this.loadTx(txid, true);
-    }
-    const missingTxids = Object.keys(missing);
-    if (missingTxids.length) {
-      const results = await this.services.txns.fetchTxns(missingTxids);
-      await Promise.all([
-        ...results.map((txn) => {
-          if (!txn.proof) return;
-          let merklePath = MerklePath.fromBinary(txn.proof);
-          txn.block.height = merklePath!.blockHeight;
-          txn.block.idx = BigInt(
-            merklePath!.path[0].find((p) => p.hash == txn.txid)?.offset || 0
-          );
-        }),
-      ]);
-      await this.storage.putMany(results);
-    }
-  }
+  // async ensureTxns(txids: string[]) {
+  //   console.log("Downloading", txids.length, "txs");
+  //   const exists = await this.storage.exists(txids);
+  //   const missing: { [txid: string]: boolean } = {};
+  //   for (const [i, txid] of txids.entries()) {
+  //     if (!exists[i]) await this.loadTx(txid, true);
+  //   }
+  //   const missingTxids = Object.keys(missing);
+  //   if (missingTxids.length) {
+  //     const results = await this.services.txns?.fetchTxns(missingTxids) || [];
+  //     await Promise.all([
+  //       ...results.map((txn) => {
+  //         if (!txn.proof) return;
+  //         let merklePath = MerklePath.fromBinary(txn.proof);
+  //         txn.block.height = merklePath!.blockHeight;
+  //         txn.block.idx = BigInt(
+  //           merklePath!.path[0].find((p) => p.hash == txn.txid)?.offset || 0
+  //         );
+  //       }),
+  //     ]);
+  //     await this.storage.putMany(results);
+  //   }
+  // }
 }

@@ -1,13 +1,14 @@
-import { Hash, OP, Utils } from "@bsv/sdk";
+import { Hash, OP, Script, Utils } from "@bsv/sdk";
 import type { IndexContext } from "../models/index-context";
 
 import {
-  IndexData,
+  type IndexData,
   Indexer,
   Outpoint,
   parseAddress,
   type Event,
 } from "../models";
+import { MAP_PROTO, MapIndexer } from "./map";
 
 export interface File {
   hash: string;
@@ -44,6 +45,7 @@ export class InscriptionIndexer extends Indexer {
         script.chunks[i - 2].op == OP.OP_FALSE
       ) {
         fromPos = i + 1;
+        break;
       }
     }
     if (fromPos === undefined) return;
@@ -67,12 +69,13 @@ export class InscriptionIndexer extends Indexer {
       const value = script.chunks[i + 1];
       if (value.op > OP.OP_PUSHDATA4) return;
 
-      if (field.data?.length || 0 > 1) {
-        if (!insc.fields) insc.fields = {};
-        insc.fields[Buffer.from(field.data!).toString()] = value.data;
+      if (field.data?.length && Utils.toUTF8(field.data) == MAP_PROTO) {
+        const map = MapIndexer.parseMap(Script.fromBinary(value.data || []), 0);
+        if (map) {
+          txo.data["map"] = { data: map };
+        }
         continue;
       }
-      // TODO: handle MAP
 
       let fieldNo = 0;
       if (field.op > OP.OP_PUSHDATA4 && field.op <= OP.OP_16) {
@@ -84,7 +87,7 @@ export class InscriptionIndexer extends Indexer {
         case 0:
           insc.file!.size = value.data?.length || 0;
           if (!value.data?.length) break;
-          insc.file!.hash = Utils.toHex(Hash.sha256(value.data));
+          insc.file!.hash = Utils.toBase64(Hash.sha256(value.data));
           insc.file!.content = value.data;
           break;
         case 1:
@@ -94,12 +97,8 @@ export class InscriptionIndexer extends Indexer {
           if (!value.data || value.data.length != 36) break;
           try {
             const parent = new Outpoint(value.data);
-            if (
-              !ctx.spends.find(
-                (s) => s.outpoint.toString() == parent.toString(),
-              )
-            )
-              continue;
+            // TODO: Not sure this is correct
+            if (!ctx.spends.find((s) => s.outpoint.toString() == parent.toString())) break;
             insc.parent = parent.toString();
           } catch {
             console.log("Error parsing parent outpoint");
@@ -116,6 +115,38 @@ export class InscriptionIndexer extends Indexer {
     if (txo.owner && this.owners.has(txo.owner)) {
       events.push({ id: "address", value: txo.owner });
     }
-    return new IndexData(insc, events);
+    return {
+      data: insc,
+      events,
+    }
+  }
+
+  static serialize(insc: Inscription): string {
+    return JSON.stringify({
+      file: insc.file && {
+        hash: insc.file.hash,
+        size: insc.file.size,
+        type: insc.file.type,
+        content: Utils.toBase64(insc.file.content),
+      },
+      fields: insc.fields,
+      parent: insc.parent,
+    })
+  }
+
+  serialize(obj: any): string {
+    return InscriptionIndexer.serialize(obj);
+  }
+
+  static deserialize(str: string): Inscription {
+    const insc = JSON.parse(str);
+    if (insc.file) {
+      insc.file.content = Utils.toArray(insc.file.content, 'base64');
+    }
+    return insc as Inscription;
+  }
+
+  deserialize(str: string): any {
+    return InscriptionIndexer.deserialize(str);
   }
 }

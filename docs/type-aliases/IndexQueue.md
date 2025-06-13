@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / IndexQueue
+[spv-store v0.1.73](../globals.md) / IndexQueue
 
 # Type Alias: IndexQueue
 
@@ -14,4 +14,4 @@
 
 ## Defined in
 
-[models/index-context.ts:5](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/index-context.ts#L5)
+[models/index-context.ts:6](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/index-context.ts#L6)

@@ -9,11 +9,21 @@ const PAGE_SIZE = 10000;
 export class BlockStore implements ChainTracker {
   private syncRunning: Promise<void> | undefined;
   private stopSync = false;
+  private cancelSync: Promise<void>;
   constructor(
     public storage: BlockStorage,
     public services: Services,
     public emitter?: EventEmitter
-  ) {}
+  ) {
+    this.cancelSync = new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (this.stopSync) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
 
   async destroy() {
     this.stopSync = true;
@@ -29,7 +39,6 @@ export class BlockStore implements ChainTracker {
    */
   async sync(returnOnChaintip = true): Promise<void> {
     if (this.syncRunning) return;
-    // const doSync = async (returnOnChaintip: boolean) =>
     this.syncRunning = this.doSync(returnOnChaintip);
     if (returnOnChaintip) {
       await this.syncRunning;
@@ -38,10 +47,10 @@ export class BlockStore implements ChainTracker {
   }
 
   private async doSync(returnOnChaintip = true): Promise<void> {
-    let lastHeight = 1;
-    const syncedBlock = await this.storage.getSynced();
+    let lastHeight = 0;
+    let syncedBlock = await this.storage.getSynced();
     if (syncedBlock) {
-      lastHeight = syncedBlock.height > 5 ? syncedBlock.height - 5 : 1;
+      lastHeight = syncedBlock.height > 5 ? syncedBlock.height - 5 : 0;
     }
     while (!this.stopSync) {
       try {
@@ -54,24 +63,29 @@ export class BlockStore implements ChainTracker {
         );
         await this.storage.putMany(blocks);
         if (blocks.length == 0) break;
-        const lastBlock = blocks[blocks.length - 1];
-        this.emitter?.emit("syncedBlockHeight", lastBlock.height);
-        if (blocks.length < PAGE_SIZE) break;
-        lastHeight = lastBlock.height + 1;
-      } catch (e) {
-        if (returnOnChaintip) {
-          throw e;
+        if (syncedBlock?.hash != blocks[blocks.length - 1].hash) {
+          this.emitter?.emit("syncedBlockHeight", blocks[blocks.length - 1].height);
         }
+        syncedBlock = blocks[blocks.length - 1];
+        if (blocks.length < PAGE_SIZE) break;
+        lastHeight = syncedBlock.height + 1;
+      } catch (e) {
         console.error(e);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
-    // this.syncInProgress = false;
     if (returnOnChaintip || this.stopSync) {
       return;
     }
-    await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
-    return this.doSync(returnOnChaintip);
+
+    await Promise.race([
+      new Promise((resolve) => setTimeout(resolve, 60 * 1000)),
+      this.cancelSync,
+    ]);
+
+    if (!this.stopSync) {
+      return this.doSync(returnOnChaintip);
+    }
   }
 
   /**
@@ -83,7 +97,9 @@ export class BlockStore implements ChainTracker {
    */
   async isValidRootForHeight(root: string, height: number): Promise<boolean> {
     const block = await this.storage.getByHeight(height);
-    return block?.merkleroot == root;
+    const valid = block?.merkleRoot == root;
+    // console.log('valid:', valid, block?.merkleRoot, root);
+    return valid;
   }
 
   /**
@@ -93,5 +109,10 @@ export class BlockStore implements ChainTracker {
    */
   async getChaintip(): Promise<BlockHeader | undefined> {
     return this.storage.getSynced();
+  }
+
+  async currentHeight(): Promise<number> {
+    const chaintip = await this.getChaintip();
+    return chaintip?.height || 0;
   }
 }

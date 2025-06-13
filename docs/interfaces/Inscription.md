@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / Inscription
+[spv-store v0.1.73](../globals.md) / Inscription
 
 # Interface: Inscription
 
@@ -18,7 +18,7 @@
 
 #### Defined in
 
-[indexers/insc.ts:21](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/insc.ts#L21)
+[indexers/insc.ts:22](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/insc.ts#L22)
 
 ***
 
@@ -28,7 +28,7 @@
 
 #### Defined in
 
-[indexers/insc.ts:20](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/insc.ts#L20)
+[indexers/insc.ts:21](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/insc.ts#L21)
 
 ***
 
@@ -38,4 +38,4 @@
 
 #### Defined in
 
-[indexers/insc.ts:22](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/insc.ts#L22)
+[indexers/insc.ts:23](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/insc.ts#L23)

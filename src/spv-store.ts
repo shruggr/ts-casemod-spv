@@ -5,19 +5,19 @@ import {
   type BroadcastFailure,
   type BroadcastResponse,
 } from "@bsv/sdk";
-import type { TxoLookup, TxoResults } from "./models/search";
+import type { TxLogResults, TxoLookup, TxoResults } from "./models/search";
 import {
-  TxLog,
+  type AccountService,
   type BlockHeaderService,
   type BroadcastService,
-  type InventoryService,
   type TxnService,
+  type TxSyncLog,
 } from "./services";
 import type { BlockStore, Txn, TxnStore, TxoStore } from "./stores";
 import {
-  blockHeaderFromReader,
   Outpoint,
   ParseMode,
+  TxLog,
   Txo,
   TxoSort,
   type BlockHeader,
@@ -25,14 +25,15 @@ import {
   type Ingest,
 } from "./models";
 import { EventEmitter } from "./lib/event-emitter";
+import type { TxnBackup, TxoBackup } from "./storage";
 
 export type Network = "mainnet" | "testnet";
 
 export interface Services {
+  account?: AccountService;
   blocks: BlockHeaderService;
-  txns: TxnService;
+  txns?: TxnService;
   broadcast: BroadcastService;
-  inv: InventoryService;
 }
 
 export interface Stores {
@@ -47,7 +48,10 @@ export class SPVStore {
     public services: Services,
     public stores: Stores,
     public events = new EventEmitter(),
-    startSync = false
+    startSync = false,
+    public syncTags?: Set<string>,
+    public parseMode?: ParseMode,
+    public subscribe = false,
   ) {
     if (startSync) this.sync();
   }
@@ -72,7 +76,8 @@ export class SPVStore {
     source = "",
   ): Promise<BroadcastResponse | BroadcastFailure> {
     let resp: BroadcastResponse | BroadcastFailure;
-    if(!tx.merklePath) {
+    if (!tx.merklePath) {
+      await this.stores.txns!.populateTx(tx, true);
       resp = await this.stores.txns!.broadcast(tx);
     } else {
       resp = {
@@ -82,45 +87,103 @@ export class SPVStore {
       }
     }
     if (isBroadcastResponse(resp)) {
-      await this.stores.txos!.ingest(tx, source, ParseMode.Persist, true)
+      await this.stores.txos!.ingest(tx, source, ParseMode.Persist);
     }
     return resp;
-
   }
 
-  async sync(): Promise<void> {
+  async ingestTxs(txs: Transaction[]): Promise<void> {
+    const ingests: Ingest[] = []
+    for (const tx of txs) {
+      await this.stores.txns?.saveTx(tx);
+      const txid = tx.id("hex");
+
+      ingests.push({
+        txid,
+        height: tx.merklePath?.blockHeight || Date.now(),
+        idx: tx.merklePath?.path[0].find((p) => p.hash == txid)?.offset || 0,
+        source: "sync",
+        parseMode: ParseMode.Persist,
+      });
+    }
+  }
+
+  async ingestIfNew(ingests: Ingest[]): Promise<void> {
+    for (const ingest of ingests) {
+      let existing = await this.stores.txos!.storage.getIngest(ingest.txid);
+      if(!existing) {
+        await this.stores.txos!.queue([ingest]);
+      }
+    }
+  }
+
+  async ingest(ingests: Ingest[]): Promise<void> {
+    await this.stores.txos?.queue(ingests);
+  }
+
+  async refreshSpends(): Promise<void> {
+    return this.stores.txos!.refreshSpends();
+  }
+
+  async sync(resync = false, parseMode = this.parseMode): Promise<void> {
     await this.stores.blocks!.sync(true);
     this.events.emit("blocksSynced");
-    const tip = await this.getSyncedBlock();
-    const isSynced = await this.stores.txos!.storage.getState("syncHeight");
-    if (!isSynced) {
+    await this.services.account?.register([...this.stores.txos?.owners || []]);
+    const isSynced = await this.stores.txos!.storage.getState("lastSync");
+
+    console.log("Syncing wallet", isSynced);
+    if (!isSynced || resync) {
       const ingestQueue: { [txid: string]: Ingest } = {};
+      let lastSync = 1;
+
       for (const indexer of this.stores.txos!.indexers) {
-        this.events.emit("importing", {tag: indexer.tag, name: indexer.name});
-        await indexer.sync(this.stores.txos!, ingestQueue);
+        if (this.syncTags && !this.syncTags.has(indexer.tag)) continue;
+        this.events.emit("importing", { tag: indexer.tag, name: indexer.name });
+        const score = await indexer.sync(this.stores.txos!, ingestQueue, parseMode);
+        lastSync = Math.max(lastSync, score);
       }
-      this.stores.txos?.queue(Object.values(ingestQueue));
-      for (const owner of this.stores.txos!.owners) {
-        await this.stores.txos!.storage.setState(
-          `sync-${owner}`,
-          tip!.height.toString()
-        );
-      }
-      await this.stores.txos!.storage.setState(
-        "syncHeight",
-        tip!.height.toString()
-      );
+      await this.stores.txos?.queue(Object.values(ingestQueue));
+      await this.stores.txos!.storage.setState("lastSync", lastSync.toString());
       this.events.emit("txosSynced");
     }
-    this.stores.blocks!.sync();
-    this.stores.txns!.processQueue();
-    this.stores.txos!.processQueue();
-    await this.stores.txos!.syncTxLogs();
-    if (this.interval) clearInterval(this.interval);
-    this.interval = setInterval(
-      () => this.stores.txos!.syncTxLogs(),
-      60 * 1000
-    );
+
+    // This does not work in a service worker and should be disabled
+    if (!resync) {
+      if (this.subscribe) {
+        this.services.account?.subscribe(async (topic, data: string) => {
+          switch (topic) {
+            case "tx":
+              const txSyncLog = JSON.parse(data) as TxSyncLog;
+              this.stores.txos!.queue([{
+                txid: txSyncLog.txid,
+                height: Number(txSyncLog.height),
+                idx: Number(txSyncLog.idx || 0),
+                outputs: txSyncLog.outs,
+                source: "sync",
+                parseMode: ParseMode.Persist,
+              }])
+              break;
+            case "block":
+              this.stores.blocks!.sync(true);
+              break;
+          }
+        });
+      }
+
+      this.stores.blocks!.sync(false);
+      this.stores.txns!.processQueue();
+      this.stores.txos!.processQueue();
+      await this.stores.txos!.syncTxLogs();
+      if (this.interval) clearInterval(this.interval);
+      this.interval = setInterval(
+        () => this.stores.txos!.syncTxLogs(),
+        60 * 1000
+      );
+      this.stores.txos!.resolveBlock();
+      this.events.on("syncedBlockHeight", async () => {
+        this.stores.txos!.resolveBlock();
+      });
+    }
   }
 
   async search(
@@ -142,17 +205,17 @@ export class SPVStore {
 
   async getTx(
     txid: string,
-    fromRemote = false
   ): Promise<Transaction | undefined> {
-    return this.stores.txns!.loadTx(txid, fromRemote);
+    return this.stores.txns!.loadTx(txid, false);
   }
 
-  async getRecentTxs(): Promise<TxLog[]> {
-    return this.stores.txos!.storage.getRecentTxLogs(10);
+  async getRecentTxs(limit = 100): Promise<TxLog[]> {
+    return this.stores.txos!.storage.getRecentTxLogs(limit);
   }
 
   async parseTx(tx: Transaction): Promise<IndexContext> {
-    return this.stores.txos!.ingest(tx, "", ParseMode.Preview, true)
+    await this.stores.txns!.populateTx(tx, false);
+    return this.stores.txos!.ingest(tx, "", ParseMode.Preview)
   }
 
   async getSyncedBlock(): Promise<BlockHeader | undefined> {
@@ -167,73 +230,25 @@ export class SPVStore {
     return this.services.blocks!.getChaintip();
   }
 
-  async getBackupTx(txid: string): Promise<number[] | undefined> {
-    const txn = await this.stores.txns!.storage.get(txid);
-    if (!txn) return;
-    const writer = new Utils.Writer();
-    writer.writeInt8(Number(txn.status));
-    writer.writeUInt32LE(txn.block.height);
-    writer.writeUInt64LE(Number(txn.block.idx));
-    writer.writeVarIntNum(txn.rawtx.length);
-    writer.write(txn.rawtx);
-    writer.writeVarIntNum(txn.proof?.length || 0);
-    if (txn.proof) {
-      writer.write(txn.proof);
-    }
-    return writer.toArray();
+  async backupTxos(limit = 1000, from?: any): Promise<TxoBackup> {
+    return this.stores.txos!.backup(limit, from);
+  }
+  async restoreTxos(txos: any[]): Promise<void> {
+    await this.stores.txos!.restore(txos);
   }
 
-  async getBlocksBackup(): Promise<number[][]> {
-    return await this.stores.blocks!.storage.getBackup();
+  async backupTxLogs(limit = 1000, from?: any): Promise<TxLogResults> {
+    return this.stores.txos!.storage.backupTxLogs(limit, from);
+  }
+  async restoreTxLogs(logs: TxLog[]): Promise<void> {
+    await this.stores.txos!.storage.putTxLogs(logs);
   }
 
-  async restoreBlocks(data: number[]): Promise<void> {
-    const reader = new Utils.Reader(data);
-    let headers: BlockHeader[] = [];
-    while (reader.pos < data.length) {
-      headers.push(blockHeaderFromReader(reader));
-    }
-    await this.stores.blocks!.storage.putMany(headers);
+  async backupTxns(limit = 1000, from?: any): Promise<TxnBackup> {
+    return this.stores.txns!.storage.backup(limit, from);
   }
 
-  async restoreBackupTx(txid: string, data: number[]): Promise<void> {
-    const reader = new Utils.Reader(data);
-    const status = reader.readInt8();
-    const height = reader.readUInt32LE();
-    const idx = reader.readUInt64LEBn();
-    let len = reader.readVarIntNum();
-    const txn: Txn = {
-      txid,
-      status: status as any,
-      block: { height, idx: BigInt(idx.toNumber()) },
-      rawtx: reader.read(len),
-    };
-    len = reader.readVarIntNum();
-    if (len) txn.proof = reader.read(len);
-    await this.stores.txns!.storage.put(txn);
-  }
-
-  async getBackupLogs(): Promise<Ingest[]> {
-    return this.stores.txos!.storage.getBackupLogs();
-  }
-
-  async restoreBackupLogs(logs: Ingest[]): Promise<void> {
-    await this.stores.txos!.queue(logs);
-    let lastHeight = 0;
-    for (const log of logs) {
-      if (log.height > lastHeight && log.height < 50000000) {
-        lastHeight = log.height;
-      }
-    }
-    for (const owner of this.stores.txos!.owners) {
-      await this.stores.txos!.storage.setState(
-        `sync-${owner}`,
-        lastHeight.toString()
-      );
-    }
-    await this.stores.txos!.storage.setState(
-      "syncHeight",
-      lastHeight.toString()
-    );
+  async restoreTxns(data: number[]): Promise<void> {
+    await this.stores.txns!.storage.restore(data);
   }
 }

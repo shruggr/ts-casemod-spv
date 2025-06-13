@@ -1,6 +1,6 @@
-import type { IndexContext } from "../models/index-context";
+import type { IndexContext, IndexSummary } from "../models/index-context";
 import { Indexer } from "../models/indexer";
-import { IndexData } from "../models/index-data";
+import { type IndexData } from "../models/index-data";
 import { BigNumber, Script, Utils } from "@bsv/sdk";
 import type { Event } from "../models/event";
 
@@ -41,7 +41,7 @@ export class OrdLockIndexer extends Indexer {
     if (!dataScript.chunks[1]!.data || !dataScript.chunks[1]!.data) return;
     listing.payout = dataScript.chunks[1]!.data;
     listing.price = BigInt(
-      BigNumber.fromScriptNum(dataScript.chunks[1]!.data!).toString(),
+      BigNumber.fromScriptNum(dataScript.chunks[1]!.data!.slice(0, 8)).toString(),
     );
     txo.owner =
       dataScript.chunks[0]?.data &&
@@ -53,6 +53,45 @@ export class OrdLockIndexer extends Indexer {
         value: listing.price.toString(16).padStart(16, "0"),
       });
     }
-    return new IndexData(listing, events);
+    return {
+      data: listing, 
+      events,
+    };
+  }
+
+  async summerize(ctx: IndexContext): Promise<IndexSummary | undefined> {
+    for (const [vin, spend] of ctx.spends.entries()) {
+      if (!spend.script.length) return;
+      if(spend.data[this.tag]) {
+        if(Buffer.from(ctx.tx.inputs[vin].unlockingScript?.toBinary() || []).includes(SUFFIX)) {
+          return {
+            amount: 1,
+          }
+        } else {
+          return {
+            amount: 0,
+          }
+        }
+      }
+    }
+    for (const txo of ctx.txos) {
+      if(txo.data[this.tag]) {
+        return {
+          amount: -1,
+        }
+      }
+    }
+  }
+
+  serialize(obj: Listing): string {
+    return JSON.stringify({
+      payout: obj.payout,
+      price: obj.price.toString(10),
+    });
+  }
+
+  deserialize(str: string): Listing {
+    const obj = JSON.parse(str);
+    return new Listing(obj.payout, BigInt(obj.price));
   }
 }

@@ -1,8 +1,13 @@
-import type { TxLog } from "../services/inv-service";
+import type { TxLog, TxLogResults } from "../models";
 import type { Ingest, IngestStatus } from "../models/ingest";
 import type { Outpoint } from "../models/outpoint";
 import type { TxoLookup, TxoResults, TxoSort } from "../models/search";
 import type { Txo } from "../models/txo";
+
+export interface TxoBackup {
+  txos: any[];
+  nextPage?: any;
+}
 
 /**
  * Interface representing a storage system for transaction outputs (Txo).
@@ -80,6 +85,8 @@ export interface TxoStorage {
    */
   getQueueLength(): Promise<number>;
 
+  getIngest(txid: string): Promise<Ingest | undefined>;
+  
   /**
    * Retrieves ingests based on their status.
    * @param status - The status of the ingests.
@@ -150,10 +157,21 @@ export interface TxoStorage {
    * @returns A promise that resolves when the operation is complete.
    */
   putTxLog(txLog: TxLog): Promise<void>;
+  putTxLogs(logs: TxLog[]): Promise<void>;
 
   /**
    * Retrieves backup logs.
    * @returns A promise that resolves to an array of backup logs.
    */
-  getBackupLogs(): Promise<Ingest[]>;
+  getBackupLogs(): Promise<TxLog[]>;
+
+  /**
+   * Get all user utxos
+   * @returns A promise that resolves to an array of utxos
+   * 
+   */
+  getUtxos(): Promise<Txo[]>;
+
+  backup(limit: number, from?: any): Promise<TxoResults>;
+  backupTxLogs(limit: number, from?: any): Promise<TxLogResults>;
 }

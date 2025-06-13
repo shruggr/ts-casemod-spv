@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / TxoLookup
+[spv-store v0.1.73](../globals.md) / TxoLookup
 
 # Class: TxoLookup
 
@@ -10,7 +10,7 @@
 
 ### new TxoLookup()
 
-> **new TxoLookup**(`tag`, `id`?, `value`?, `owner`?): [`TxoLookup`](TxoLookup.md)
+> **new TxoLookup**(`tag`, `id`?, `value`?, `owner`?, `includeSpent`?): [`TxoLookup`](TxoLookup.md)
 
 Constructs a new instance of the search model.
 
@@ -32,13 +32,15 @@ Optional value of the field to be searched.
 
 Optional owner of the transaction output.
 
+• **includeSpent?**: `boolean`
+
 #### Returns
 
 [`TxoLookup`](TxoLookup.md)
 
 #### Defined in
 
-[models/search.ts:17](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L17)
+[models/search.ts:17](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L17)
 
 ## Properties
 
@@ -50,7 +52,17 @@ Optional ID of the field to be searched. Required if value populated.
 
 #### Defined in
 
-[models/search.ts:19](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L19)
+[models/search.ts:19](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L19)
+
+***
+
+### includeSpent?
+
+> `optional` **includeSpent**: `boolean`
+
+#### Defined in
+
+[models/search.ts:22](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L22)
 
 ***
 
@@ -62,7 +74,7 @@ Optional owner of the transaction output.
 
 #### Defined in
 
-[models/search.ts:21](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L21)
+[models/search.ts:21](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L21)
 
 ***
 
@@ -74,7 +86,7 @@ Tag of the indexer to be searched.
 
 #### Defined in
 
-[models/search.ts:18](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L18)
+[models/search.ts:18](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L18)
 
 ***
 
@@ -86,7 +98,7 @@ Optional value of the field to be searched.
 
 #### Defined in
 
-[models/search.ts:20](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L20)
+[models/search.ts:20](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L20)
 
 ## Methods
 
@@ -100,7 +112,7 @@ Optional value of the field to be searched.
 
 #### Defined in
 
-[models/search.ts:24](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L24)
+[models/search.ts:25](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L25)
 
 ***
 
@@ -122,4 +134,4 @@ Optional value of the field to be searched.
 
 #### Defined in
 
-[models/search.ts:28](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/search.ts#L28)
+[models/search.ts:29](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/search.ts#L29)

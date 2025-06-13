@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / TxoStorageIDB
+[spv-store v0.1.73](../globals.md) / TxoStorageIDB
 
 # Class: TxoStorageIDB
 
@@ -20,7 +20,7 @@ Interface representing a storage system for transaction outputs (Txo).
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:78](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L78)
+[storage/idb/idb-txos.ts:85](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L85)
 
 ## Methods
 
@@ -48,7 +48,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:260](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L260)
+[storage/idb/idb-txos.ts:281](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L281)
 
 ***
 
@@ -76,7 +76,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:264](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L264)
+[storage/idb/idb-txos.ts:285](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L285)
 
 ***
 
@@ -98,7 +98,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:108](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L108)
+[storage/idb/idb-txos.ts:116](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L116)
 
 ***
 
@@ -126,7 +126,7 @@ A promise that resolves to the transaction output or undefined if not found.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:112](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L112)
+[storage/idb/idb-txos.ts:120](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L120)
 
 ***
 
@@ -148,7 +148,7 @@ A promise that resolves to an array of backup logs.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:299](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L299)
+[storage/idb/idb-txos.ts:321](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L321)
 
 ***
 
@@ -176,7 +176,7 @@ A promise that resolves to an array of transaction outputs.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:126](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L126)
+[storage/idb/idb-txos.ts:134](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L134)
 
 ***
 
@@ -216,7 +216,7 @@ A promise that resolves to an array of ingests.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:208](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L208)
+[storage/idb/idb-txos.ts:229](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L229)
 
 ***
 
@@ -244,7 +244,7 @@ A promise that resolves to an array of transaction outputs or undefined if not f
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:117](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L117)
+[storage/idb/idb-txos.ts:125](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L125)
 
 ***
 
@@ -266,7 +266,7 @@ A promise that resolves to the length of the queue.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:196](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L196)
+[storage/idb/idb-txos.ts:217](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L217)
 
 ***
 
@@ -294,7 +294,7 @@ A promise that resolves to an array of recent transaction logs.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:287](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L287)
+[storage/idb/idb-txos.ts:309](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L309)
 
 ***
 
@@ -322,7 +322,7 @@ A promise that resolves to the state value or undefined if not found.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:187](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L187)
+[storage/idb/idb-txos.ts:208](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L208)
 
 ***
 
@@ -350,7 +350,7 @@ A promise that resolves to the transaction log or undefined if not found.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:270](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L270)
+[storage/idb/idb-txos.ts:291](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L291)
 
 ***
 
@@ -378,7 +378,29 @@ A promise that resolves to an array of transaction logs or undefined if not foun
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:274](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L274)
+[storage/idb/idb-txos.ts:295](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L295)
+
+***
+
+### getUtxos()
+
+> **getUtxos**(): `Promise`\<[`Txo`](Txo.md)[]\>
+
+Get all user utxos
+
+#### Returns
+
+`Promise`\<[`Txo`](Txo.md)[]\>
+
+A promise that resolves to an array of utxos
+
+#### Implementation of
+
+[`TxoStorage`](../interfaces/TxoStorage.md).[`getUtxos`](../interfaces/TxoStorage.md#getutxos)
+
+#### Defined in
+
+[storage/idb/idb-txos.ts:382](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L382)
 
 ***
 
@@ -398,7 +420,7 @@ A promise that resolves to an array of transaction logs or undefined if not foun
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:335](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L335)
+[storage/idb/idb-txos.ts:357](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L357)
 
 ***
 
@@ -426,13 +448,13 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:135](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L135)
+[storage/idb/idb-txos.ts:143](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L143)
 
 ***
 
 ### putIngest()
 
-> **putIngest**(`ingest`): `Promise`\<`void`\>
+> **putIngest**(`ingest`, `t`?): `Promise`\<`void`\>
 
 Stores an ingest.
 
@@ -441,6 +463,8 @@ Stores an ingest.
 • **ingest**: [`Ingest`](../interfaces/Ingest.md)
 
 The ingest to store.
+
+• **t?**: `IDBPTransaction`\<[`TxoSchema`](../interfaces/TxoSchema.md), [`"ingestQueue"`], `"readwrite"`\>
 
 #### Returns
 
@@ -454,7 +478,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:227](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L227)
+[storage/idb/idb-txos.ts:248](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L248)
 
 ***
 
@@ -482,7 +506,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:241](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L241)
+[storage/idb/idb-txos.ts:270](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L270)
 
 ***
 
@@ -510,7 +534,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:140](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L140)
+[storage/idb/idb-txos.ts:148](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L148)
 
 ***
 
@@ -538,7 +562,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:283](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L283)
+[storage/idb/idb-txos.ts:305](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L305)
 
 ***
 
@@ -578,7 +602,7 @@ A promise that resolves to the search results.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:152](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L152)
+[storage/idb/idb-txos.ts:161](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L161)
 
 ***
 
@@ -610,7 +634,7 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:192](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L192)
+[storage/idb/idb-txos.ts:213](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L213)
 
 ***
 
@@ -630,4 +654,4 @@ A promise that resolves when the operation is complete.
 
 #### Defined in
 
-[storage/idb/idb-txos.ts:79](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/storage/idb/idb-txos.ts#L79)
+[storage/idb/idb-txos.ts:86](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/storage/idb/idb-txos.ts#L86)

@@ -1,15 +1,14 @@
-import { Transaction } from "@bsv/sdk";
+import { Beef, Transaction } from "@bsv/sdk";
 import type { Indexer } from "../models/indexer";
 import { type IndexContext } from "../models/index-context";
 import { Txo, TxoStatus } from "../models/txo";
 import { type Ingest, IngestStatus } from "../models/ingest";
 import { Block } from "../models/block";
-import type { TxoStorage } from "../storage/txo-storage";
+import type { TxoBackup, TxoStorage } from "../storage/txo-storage";
 import { Outpoint } from "../models/outpoint";
-import type { TxLog } from "../services/inv-service";
 import type { Services, Stores } from "../spv-store";
 import type { EventEmitter } from "../lib/event-emitter";
-import { ParseMode, TxoSort, type TxoLookup, type TxoResults } from "../models";
+import { ParseMode, TxoSort, UnmetDependency, type TxoLookup, type TxoResults } from "../models";
 
 export class TxoStore {
   private syncRunning: Promise<void> | undefined;
@@ -22,7 +21,6 @@ export class TxoStore {
     public owners: Set<string>,
     public events?: EventEmitter,
   ) { }
-
 
   /**
    * Asynchronously destroys the current instance by stopping synchronization and 
@@ -45,7 +43,7 @@ export class TxoStore {
    * @param from - An optional parameter to specify the starting point for the search. Use for pagination.
    * @returns A promise that resolves to the search results.
    */
-  public async search(
+  async search(
     lookup: TxoLookup,
     sort = TxoSort.DESC,
     limit = 100,
@@ -53,6 +51,11 @@ export class TxoStore {
   ): Promise<TxoResults> {
     return this.storage.search(lookup, sort, limit, from);
   }
+
+  async loadTx(txid: string, persist = true): Promise<Transaction> {
+    return this.stores.txns!.loadTx(txid, persist);
+  }
+
 
   /**
    * Ingests a new transaction into the store, building an index context for it.
@@ -69,9 +72,12 @@ export class TxoStore {
     tx: Transaction,
     source: string = "",
     parseMode = ParseMode.Persist,
-    resolveParents = false,
-    outputs?: number[],
+    outputs?: Set<number>,
   ): Promise<IndexContext> {
+    const beef = Beef.fromBinary(tx.toAtomicBEEF());
+    if (!await beef.verify(this.stores.blocks!)) {
+      throw new Error("Invalid transaction proof");
+    }
     const ctx = await this.buildIndexContext(tx);
     for (const input of tx.inputs.values()) {
       if (!input.sourceTXID) {
@@ -80,42 +86,27 @@ export class TxoStore {
         }
         input.sourceTXID = input.sourceTransaction.id("hex") as string;
       }
-      let spend: Txo | undefined;
-      if (input.sourceTransaction?.merklePath) {
-        const sourceCtx = await this.ingest(
-          input.sourceTransaction,
-          "beef",
-          parseMode,
-          false,
-        );
-        spend = sourceCtx.txos[input.sourceOutputIndex];
-      } else {
-        spend = await this.storage.get(new Outpoint(input.sourceTXID, input.sourceOutputIndex));
-        if ((!spend || spend.script.length == 0)) {
-          if (resolveParents) {
-            const sourceTx = await this.stores.txns!.loadTx(input.sourceTXID, true);
-            if (!sourceTx) {
-              throw new Error(`Failed to load source tx: ${input.sourceTXID}`);
-            }
-            spend = spend = new Txo(
-              new Outpoint(input.sourceTXID!, input.sourceOutputIndex),
-              BigInt(
-                sourceTx.outputs[input.sourceOutputIndex].satoshis || 0,
-              ),
-              sourceTx.outputs[input.sourceOutputIndex]?.lockingScript.toBinary() || [],
-              TxoStatus.Unindexed,
-            )
-          } else {
-            spend = new Txo(
-              new Outpoint(input.sourceTXID!, input.sourceOutputIndex),
-              0n,
-              [],
-              TxoStatus.Unindexed,
-            );
-          }
+
+      const outpoint = new Outpoint(input.sourceTXID, input.sourceOutputIndex)
+      let spend = await this.storage.get(outpoint);
+      if (!spend) {
+        if (input.sourceTransaction) {
+          const context = await this.ingest(
+            input.sourceTransaction, "beef",
+            parseMode == ParseMode.PersistSummary ? ParseMode.Persist : parseMode,
+            new Set([input.sourceOutputIndex])
+          );
+          spend = context.txos[input.sourceOutputIndex];
+        } else {
+          spend = new Txo(
+            new Outpoint(input.sourceTXID, input.sourceOutputIndex),
+            0n,
+            [],
+            TxoStatus.Dependency,
+          );
         }
       }
-      spend.spend = ctx.txid;
+
       ctx.spends.push(spend);
     }
 
@@ -129,51 +120,57 @@ export class TxoStore {
           new Outpoint(ctx.txid, vout),
           0n,
           [],
-          TxoStatus.Unindexed,
+          TxoStatus.Dependency,
         );
       }
       txo.satoshis = BigInt(output.satoshis!);
       txo.script = output.lockingScript.toBinary();
+      txo.status = parseMode == ParseMode.Dependency || (outputs && !outputs.has(vout)) ?
+        TxoStatus.Dependency :
+        TxoStatus.Validated;
       ctx.txos.push(txo);
-      if (outputs && !outputs.includes(vout)) {
-        continue;
+      let outputParseMode = parseMode;
+      if (outputs && !outputs.has(vout)) {
+        // TODO: Should this include Preview?
+        if (parseMode == ParseMode.PersistSummary) {
+          outputParseMode = ParseMode.Dependency
+        } else {
+          continue;
+        }
       }
       for (const i of this.indexers) {
-        try {
-          const data = i.parse && (await i.parse(ctx, vout, parseMode));
-          if (data) {
-            txo.data[i.tag] = data;
-          }
-        } catch (e) {
-          console.error("indexer error: continuing", i.tag, e);
+        const data = i.parse && (await i.parse(ctx, vout, outputParseMode));
+        if (data) {
+          txo.data[i.tag] = data;
         }
       }
     }
 
-    for (const i of this.indexers) {
-      i.preSave && await i.preSave(ctx)
-    }
-
-    if (parseMode == ParseMode.Preview) return ctx
-    await this.storage.putMany(ctx.spends);
-    ctx.txos.forEach((txo) => {
-      txo.block = ctx.block;
-      if (
-        txo.status == TxoStatus.Unindexed ||
-        txo.status == TxoStatus.Dependency
-      ) {
-        txo.status = parseMode == ParseMode.Dependency ?
-          TxoStatus.Dependency :
-          TxoStatus.Validated;
+    for (let [vin, spend] of ctx.spends.entries()) {
+      spend.spend = ctx.txid;
+      if (!spend.script.length) {
+        if ([ParseMode.Preview, ParseMode.PersistSummary].includes(parseMode)) {
+          ctx.spends[vin] = await this.resolveOutput(spend.outpoint, ParseMode.OutputsOnly)
+        }
       }
-    });
+    };
 
-    if (outputs) {
-      await this.storage.putMany(outputs.map((i) => ctx.txos[i]));
-    } else {
-      await this.storage.putMany(ctx.txos);
+    for (const i of this.indexers) {
+      const summery = await i.summerize(ctx, parseMode);
+      if (summery) {
+        ctx.summary[i.tag] = summery;
+      }
     }
-    if (parseMode == ParseMode.Persist) {
+
+    if ([ParseMode.OutputsOnly, ParseMode.Preview].includes(parseMode)) return ctx
+    await this.storage.putMany(ctx.spends);
+    ctx.txos.forEach((txo) => txo.block = ctx.block);
+
+    await this.storage.putMany(
+      ctx.txos.filter(t => parseMode == ParseMode.PersistSummary || !outputs || outputs.has(t.outpoint.vout))
+    );
+
+    if ([ParseMode.Persist, ParseMode.PersistSummary].includes(parseMode) && Object.keys(ctx.summary).length) {
       this.storage.putTxLog({
         txid: ctx.txid,
         height: ctx.block.height,
@@ -182,17 +179,35 @@ export class TxoStore {
         source,
       });
     }
-    const toQueue = Object.entries(ctx.queue);
-    if (toQueue.length) {
-      await this.queue(toQueue.map(([txid, block]) => ({
-        txid: txid,
-        height: block.height,
-        idx: Number(block.idx),
-        source: "ancestor",
-        parseMode: ParseMode.Dependency,
-      })));
-    }
+
+    this.stores.txns!.saveTx(tx);
     return ctx;
+  }
+
+  async queueDependency(outpoint: Outpoint, parseMode = ParseMode.Dependency) {
+    const tx = await this.loadTx(outpoint.txid, parseMode > ParseMode.Preview);
+    const block = new Block();
+    if (tx?.merklePath) {
+      block.height = tx.merklePath.blockHeight;
+      block.idx = BigInt(tx.merklePath.path[0].find((p) => p.hash == outpoint.txid)?.offset || 0);
+    }
+    await this.queue([{
+      txid: outpoint.txid,
+      height: block.height,
+      idx: Number(block.idx),
+      parseMode,
+      source: 'dependency',
+      outputs: [outpoint.vout],
+      status: IngestStatus.QUEUED,
+    }])
+  }
+
+  async resolveOutput(outpoint: Outpoint, parseMode: ParseMode = ParseMode.Dependency): Promise<Txo> {
+    const tx = await this.stores.txns!.loadTx(outpoint.txid, parseMode > ParseMode.Preview);
+    if (!tx) throw new Error(`missing-tx-${outpoint.txid}`);
+    this.events?.emit("resolvingParent", { txid: outpoint.txid });
+    const context = await this.ingest(tx, "input", parseMode, new Set([outpoint.vout]));
+    return context.txos[outpoint.vout];
   }
 
   async updateQueueStats() {
@@ -207,69 +222,48 @@ export class TxoStore {
 
   async processQueue() {
     if (this.syncRunning) return;
+
     await this.updateQueueStats();
     this.syncRunning = Promise.all([
-      this.processDownloads(),
       this.processIngests(),
       this.processConfirms(),
       this.processImmutable(),
     ]).then(() => { });
   }
 
-  async processDownloads(): Promise<void> {
-    try {
-      const ingests = await this.storage.getIngests(IngestStatus.QUEUED, 25);
-      if (ingests.length) {
-        await this.stores.txns!.ensureTxns(ingests.map((i) => i.txid));
-
-        const dels: string[] = []
-        const updates: Ingest[] = []
-        for (const ingest of ingests) {
-          if (ingest.downloadOnly) {
-            dels.push(ingest.txid)
-          } else {
-            ingest.status = IngestStatus.DOWNLOADED;
-            updates.push(ingest)
-          }
-        }
-        if (dels.length) {
-          await this.storage.delIngests(dels)
-        }
-        if (updates.length) {
-          await this.storage.putIngests(updates);
-        }
-        await this.updateQueueStats();
-      } else {
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-    } catch (e) {
-      console.error("Failed to ingest txs", e);
-      await new Promise((r) => setTimeout(r, 15000));
-    }
-    if (this.stopSync) {
-      return;
-    }
-    return this.processDownloads();
-  }
-
   async processIngests(): Promise<void> {
     try {
       const ingests = await this.storage.getIngests(
-        IngestStatus.DOWNLOADED,
+        IngestStatus.QUEUED,
         25,
       );
       if (ingests.length) {
         console.log("Ingesting", ingests.length, "txs");
         for await (const ingest of ingests) {
-          const tx = await this.stores.txns!.loadTx(ingest.txid);
-          if (!tx) {
-            console.error("Failed to get tx", ingest.txid);
-            continue;
+          try {
+            const tx = await this.stores.txns!.loadTx(ingest.txid, true);
+            if (!tx) {
+              console.error("Failed to get tx", ingest.txid);
+              continue;
+            }
+            await this.ingest(tx, ingest.source, ingest.parseMode, ingest.outputs && new Set(ingest.outputs));
+            ingest.status = IngestStatus.INGESTED;
+            await this.storage.putIngest(ingest);
+            await this.updateQueueStats();
+          } catch (e) {
+            if (e instanceof UnmetDependency) {
+              await this.queueDependency(e.outpoint, e.parseMode);
+              if (!ingest.height || ingest.height > 50000000) {
+                ingest.height = Date.now();
+                await this.storage.putIngest(ingest);
+              }
+              await this.updateQueueStats();
+              // console.log("Processing dependency", ingest.txid)
+              return this.processIngests();
+            } else {
+              console.error("Failed to ingest tx", ingest.txid, e);
+            }
           }
-          await this.ingest(tx, ingest.source, ingest.parseMode, true, ingest.outputs);
-          ingest.status = IngestStatus.INGESTED;
-          await this.storage.putIngest(ingest);
-          await this.updateQueueStats();
         }
       } else {
         await new Promise((r) => setTimeout(r, 1000));
@@ -302,7 +296,7 @@ export class TxoStore {
           if (!tx.merklePath) {
             ingest.height = Date.now();
           } else {
-            const ctx = await this.ingest(tx, ingest.source, ingest.parseMode, false, ingest.outputs);
+            const ctx = await this.ingest(tx, ingest.source, ingest.parseMode, ingest.outputs && new Set(ingest.outputs));
             ingest.status = IngestStatus.CONFIRMED;
             ingest.height = ctx.block.height;
             ingest.idx = Number(ctx.block.idx);
@@ -347,7 +341,8 @@ export class TxoStore {
           if (!tx.merklePath.verify(ingest.txid, this.stores.blocks!)) {
             continue;
           }
-          await this.storage.delIngest(ingest.txid);
+          ingest.status = IngestStatus.IMMUTABLE;
+          await this.storage.putIngest(ingest);
         }
       } else {
         await new Promise((r) => setTimeout(r, 1000));
@@ -362,36 +357,47 @@ export class TxoStore {
     return this.processImmutable();
   }
 
-  async syncTxLogs() {
-    let syncedState = await this.storage.getState("syncHeight");
-    if (!syncedState) return
-    for (const owner of this.owners) {
-      syncedState = await this.storage.getState(`sync-${owner}`);
-      let syncHeight = Number(syncedState);
-      console.log("Syncing logs for", owner, syncHeight);
-      const newLogs = await this.services.inv.pollTxLogs(
-        owner,
-        syncHeight,
-      );
-      const oldLogs = await this.storage.getTxLogs(
-        newLogs.map((log) => log.txid),
-      );
-      const puts = newLogs.reduce((puts, log, i) => {
-        if (!oldLogs[i]) {
-          puts.push(log);
-          syncHeight = Math.max(syncHeight, log.height);
-        }
-        return puts;
-      }, [] as TxLog[]);
-      console.log("Queueing new logs for", owner, puts);
-      await this.queue(puts.map((p) => ({
-        txid: p.txid,
-        height: Number(p.height),
-        idx: Number(p.idx || 0),
-        source: "sync",
-        parseMode: ParseMode.Persist,
-      })));
+  async syncTxLogs(parseMode = ParseMode.Persist) {
+    if (!this.services.account) return
+    let syncedState = await this.storage.getState("lastSync");
+    if (!syncedState) {
+      this.events?.emit("importing", { tag: "wallet", name: "Wallet" });
+      console.log("No initial sync. Skipping sync for", this.services.account.accountId);
+      return;
+    };
+    let lastSync = Number(syncedState || 0);
+    console.log("Syncing logs from", lastSync, "for", this.services.account.accountId);
+    const txSyncs = await this.services.account?.syncTxLogs(lastSync) || [];
+    const oldLogs = await this.storage.getTxLogs(
+      txSyncs.map((log) => log.txid),
+    );
+    const logs = new Set<string>();
+    for (const log of oldLogs) {
+      if (log) logs.add(log.txid);
     }
+
+    const ingests: Ingest[] = [];
+    for (const txLog of txSyncs) {
+      if (!logs.has(txLog.txid)) {
+        ingests.push({
+          txid: txLog.txid,
+          height: txLog.height,
+          idx: txLog.idx || 0,
+          source: "sync",
+          parseMode: ParseMode.PersistSummary,
+          outputs: txLog.outs,
+        })
+        if (txLog.score) {
+          lastSync = Math.max(lastSync, txLog.score);
+        }
+      }
+    }
+    console.log("Queueing new logs:", ingests);
+    await this.queue(ingests);
+    if (ingests.length) {
+      this.events?.emit("newTxs", ingests.length)
+    }
+    await this.storage.setState("lastSync", lastSync.toString());
   }
 
   async buildIndexContext(tx: Transaction): Promise<IndexContext> {
@@ -401,17 +407,116 @@ export class TxoStore {
       block: new Block(),
       txos: [],
       spends: [],
-      queue: {},
+      // queue: {},
       summary: {},
+      store: this,
     };
     if (tx.merklePath) {
-      if (!await tx.merklePath.verify(ctx.txid, this.stores.blocks!)) {
-        throw new Error("Failed to verify merkle path");
+      if (await tx.merklePath.verify(ctx.txid, this.stores.blocks!)) {
+        ctx.block.height = tx.merklePath.blockHeight;
+        ctx.block.idx = BigInt(tx.merklePath.path[0].find((p) => p.hash == ctx.txid)!.offset || 0);
       }
-      ctx.block.height = tx.merklePath.blockHeight;
-      ctx.block.idx = BigInt(tx.merklePath.path[0].find((p) => p.hash == ctx.txid)!.offset)
     }
     return ctx
   }
 
+  async loadIndexContext(txid: string): Promise<IndexContext> {
+    const tx = await this.loadTx(txid);
+    const ctx = await this.buildIndexContext(tx);
+    for (const input of tx.inputs) {
+      const sourceTxid = input.sourceTXID || input.sourceTransaction?.id("hex") as string;
+      const spend = await this.storage.get(new Outpoint(sourceTxid, input.sourceOutputIndex));
+      if (spend) {
+        ctx.spends.push(spend);
+      } else {
+        ctx.spends.push(new Txo(
+          new Outpoint(sourceTxid, input.sourceOutputIndex),
+          0n,
+          [],
+          TxoStatus.Dependency,
+        ));
+      }
+    }
+    const txos = await this.storage.getMany(
+      tx.outputs.map((_, i) => new Outpoint(ctx.txid, i)),
+    );
+
+    for (let [vout, txo] of txos.entries()) {
+      if (!txo) {
+        txo = new Txo(
+          new Outpoint(ctx.txid, vout),
+          0n,
+          [],
+          TxoStatus.Dependency,
+        );
+      }
+      for (const i of this.indexers) {
+        const summery = await i.summerize(ctx, ParseMode.Preview);
+        if (summery) {
+          ctx.summary[i.tag] = summery;
+        }
+      }
+      ctx.txos.push(txo);
+    }
+    return ctx;
+  }
+
+  async resolveBlock() {
+    const chaintip = await this.services.blocks.getChaintip();
+    if (!chaintip) return;
+    for (const indexer of this.stores.txos!.indexers) {
+      await indexer.resolve(this.stores.txos!, chaintip);
+    }
+  }
+
+  async refreshSpends() {
+    if (!this.services.account) return;
+    const utxos = await this.storage.getUtxos();
+    for (let i = 0; i < utxos.length; i += 50) {
+
+      const outpoints = utxos.slice(i, i + 50).map((txo) => txo.outpoint.toString())
+      const spends = await this.services.account.spends(outpoints)
+      for (const [j, spend] of spends.entries()) {
+        const txo = utxos[i + j];
+        if (spend) {
+          txo.spend = spend;
+          await this.storage.put(txo)
+        }
+      }
+    }
+  }
+
+  async backup(limit = 1000, from?: any): Promise<TxoBackup> {
+    const results = await this.stores.txos!.storage.backup(limit, from);
+    return {
+      txos: results.txos.map((t) => t.serialize(this.indexers)),
+      nextPage: results.nextPage,
+    };
+  }
+
+  async restore(data: any[]): Promise<void> {
+    const txos = data.map((o) => Txo.deserialize(o, this.indexers))
+    await this.stores.txos!.storage.putMany(txos);
+    // for(const {outpoint} of txos) {
+    //   const txLog = await this.storage.getTxLog(outpoint.txid);
+    //   if(!txLog) {
+    //     const ctx = await this.loadIndexContext(outpoint.txid);
+    //     for (const i of this.indexers) {
+    //       const summery = await i.summerize(ctx, ParseMode.Preview);
+    //       if (summery) {
+    //         ctx.summary[i.tag] = summery;
+    //       }
+    //     }
+    //     if (Object.keys(ctx.summary).length) {
+    //       await this.storage.putTxLog({
+    //         txid: ctx.txid,
+    //         height: ctx.block.height,
+    //         idx: Number(ctx.block.idx),
+    //         summary: ctx.summary,
+    //         source: "restore",
+    //       });
+    //     }
+    //   }
+    // }
+  }
 }

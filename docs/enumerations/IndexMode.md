@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / IndexMode
+[spv-store v0.1.73](../globals.md) / IndexMode
 
 # Enumeration: IndexMode
 
@@ -18,7 +18,7 @@ Rely on an external indexer.
 
 #### Defined in
 
-[models/indexer.ts:28](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L28)
+[models/indexer.ts:44](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L44)
 
 ***
 
@@ -30,7 +30,7 @@ Initially rely on an external indexer, but also load and verify all data locally
 
 #### Defined in
 
-[models/indexer.ts:32](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L32)
+[models/indexer.ts:48](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L48)
 
 ***
 
@@ -42,4 +42,4 @@ Verify all data locally. This requires all dependent data to be indexed as well.
 
 #### Defined in
 
-[models/indexer.ts:30](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L30)
+[models/indexer.ts:46](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L46)

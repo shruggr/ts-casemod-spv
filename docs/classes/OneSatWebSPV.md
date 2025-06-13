@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / OneSatWebSPV
+[spv-store v0.1.73](../globals.md) / OneSatWebSPV
 
 # Class: OneSatWebSPV
 
@@ -22,7 +22,21 @@
 
 #### Defined in
 
-[pre-config/1sat-web.ts:17](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/pre-config/1sat-web.ts#L17)
+[pre-config/1sat-web.ts:17](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/pre-config/1sat-web.ts#L17)
+
+***
+
+### parseMode?
+
+> `optional` **parseMode**: [`ParseMode`](../enumerations/ParseMode.md)
+
+#### Inherited from
+
+[`SPVStore`](SPVStore.md).[`parseMode`](SPVStore.md#parsemode)
+
+#### Defined in
+
+[spv-store.ts:53](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L53)
 
 ***
 
@@ -36,7 +50,7 @@
 
 #### Defined in
 
-[pre-config/1sat-web.ts:15](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/pre-config/1sat-web.ts#L15)
+[pre-config/1sat-web.ts:15](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/pre-config/1sat-web.ts#L15)
 
 ***
 
@@ -50,7 +64,35 @@
 
 #### Defined in
 
-[pre-config/1sat-web.ts:16](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/pre-config/1sat-web.ts#L16)
+[pre-config/1sat-web.ts:16](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/pre-config/1sat-web.ts#L16)
+
+***
+
+### subscribe
+
+> **subscribe**: `boolean` = `false`
+
+#### Inherited from
+
+[`SPVStore`](SPVStore.md).[`subscribe`](SPVStore.md#subscribe)
+
+#### Defined in
+
+[spv-store.ts:54](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L54)
+
+***
+
+### syncTags?
+
+> `optional` **syncTags**: `Set`\<`string`\>
+
+#### Inherited from
+
+[`SPVStore`](SPVStore.md).[`syncTags`](SPVStore.md#synctags)
+
+#### Defined in
+
+[spv-store.ts:52](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L52)
 
 ## Methods
 
@@ -74,7 +116,7 @@
 
 #### Defined in
 
-[spv-store.ts:70](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L70)
+[spv-store.ts:74](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L74)
 
 ***
 
@@ -92,7 +134,7 @@
 
 #### Defined in
 
-[spv-store.ts:55](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L55)
+[spv-store.ts:59](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L59)
 
 ***
 
@@ -110,7 +152,7 @@
 
 #### Defined in
 
-[spv-store.ts:216](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L216)
+[spv-store.ts:270](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L270)
 
 ***
 
@@ -132,7 +174,7 @@
 
 #### Defined in
 
-[spv-store.ts:170](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L170)
+[spv-store.ts:224](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L224)
 
 ***
 
@@ -154,7 +196,7 @@
 
 #### Defined in
 
-[spv-store.ts:162](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L162)
+[spv-store.ts:216](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L216)
 
 ***
 
@@ -172,7 +214,7 @@
 
 #### Defined in
 
-[spv-store.ts:186](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L186)
+[spv-store.ts:240](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L240)
 
 ***
 
@@ -190,13 +232,17 @@
 
 #### Defined in
 
-[spv-store.ts:166](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L166)
+[spv-store.ts:220](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L220)
 
 ***
 
 ### getRecentTxs()
 
-> **getRecentTxs**(): `Promise`\<[`TxLog`](TxLog.md)[]\>
+> **getRecentTxs**(`limit`): `Promise`\<[`TxLog`](TxLog.md)[]\>
+
+#### Parameters
+
+• **limit**: `number` = `100`
 
 #### Returns
 
@@ -208,7 +254,7 @@
 
 #### Defined in
 
-[spv-store.ts:150](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L150)
+[spv-store.ts:203](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L203)
 
 ***
 
@@ -226,19 +272,17 @@
 
 #### Defined in
 
-[spv-store.ts:158](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L158)
+[spv-store.ts:212](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L212)
 
 ***
 
 ### getTx()
 
-> **getTx**(`txid`, `fromRemote`): `Promise`\<`undefined` \| `Transaction`\>
+> **getTx**(`txid`): `Promise`\<`undefined` \| `Transaction`\>
 
 #### Parameters
 
 • **txid**: `string`
-
-• **fromRemote**: `boolean` = `false`
 
 #### Returns
 
@@ -250,7 +294,7 @@
 
 #### Defined in
 
-[spv-store.ts:143](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L143)
+[spv-store.ts:197](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L197)
 
 ***
 
@@ -272,7 +316,7 @@
 
 #### Defined in
 
-[spv-store.ts:135](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L135)
+[spv-store.ts:189](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L189)
 
 ***
 
@@ -294,7 +338,7 @@
 
 #### Defined in
 
-[spv-store.ts:139](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L139)
+[spv-store.ts:193](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L193)
 
 ***
 
@@ -316,7 +360,25 @@
 
 #### Defined in
 
-[spv-store.ts:154](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L154)
+[spv-store.ts:207](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L207)
+
+***
+
+### refreshSpends()
+
+> **refreshSpends**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Inherited from
+
+[`SPVStore`](SPVStore.md).[`refreshSpends`](SPVStore.md#refreshspends)
+
+#### Defined in
+
+[spv-store.ts:115](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L115)
 
 ***
 
@@ -338,7 +400,7 @@
 
 #### Defined in
 
-[spv-store.ts:220](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L220)
+[spv-store.ts:274](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L274)
 
 ***
 
@@ -362,7 +424,7 @@
 
 #### Defined in
 
-[spv-store.ts:199](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L199)
+[spv-store.ts:253](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L253)
 
 ***
 
@@ -384,7 +446,7 @@
 
 #### Defined in
 
-[spv-store.ts:190](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L190)
+[spv-store.ts:244](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L244)
 
 ***
 
@@ -412,13 +474,19 @@
 
 #### Defined in
 
-[spv-store.ts:126](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L126)
+[spv-store.ts:180](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L180)
 
 ***
 
 ### sync()
 
-> **sync**(): `Promise`\<`void`\>
+> **sync**(`resync`, `parseMode`): `Promise`\<`void`\>
+
+#### Parameters
+
+• **resync**: `boolean` = `false`
+
+• **parseMode**: `undefined` \| [`ParseMode`](../enumerations/ParseMode.md) = `...`
 
 #### Returns
 
@@ -430,13 +498,13 @@
 
 #### Defined in
 
-[spv-store.ts:91](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/spv-store.ts#L91)
+[spv-store.ts:119](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/spv-store.ts#L119)
 
 ***
 
 ### init()
 
-> `static` **init**(`accountId`, `indexers`, `owners`, `startSync`, `network`): `Promise`\<[`SPVStore`](SPVStore.md)\>
+> `static` **init**(`accountId`, `indexers`, `owners`, `network`, `startSync`, `syncTags`?, `parseMode`?): `Promise`\<[`SPVStore`](SPVStore.md)\>
 
 #### Parameters
 
@@ -446,9 +514,13 @@
 
 • **owners**: `Set`\<`string`\> = `...`
 
+• **network**: [`Network`](../type-aliases/Network.md) = `"mainnet"`
+
 • **startSync**: `boolean` = `false`
 
-• **network**: [`Network`](../type-aliases/Network.md) = `"mainnet"`
+• **syncTags?**: `Set`\<`string`\>
+
+• **parseMode?**: [`ParseMode`](../enumerations/ParseMode.md)
 
 #### Returns
 
@@ -456,4 +528,4 @@
 
 #### Defined in
 
-[pre-config/1sat-web.ts:23](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/pre-config/1sat-web.ts#L23)
+[pre-config/1sat-web.ts:24](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/pre-config/1sat-web.ts#L24)

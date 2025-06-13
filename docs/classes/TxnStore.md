@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / TxnStore
+[spv-store v0.1.73](../globals.md) / TxnStore
 
 # Class: TxnStore
 
@@ -28,7 +28,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:53](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L53)
+[stores/txn-store.ts:53](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L53)
 
 ## Properties
 
@@ -38,7 +38,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:57](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L57)
+[stores/txn-store.ts:57](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L57)
 
 ***
 
@@ -48,7 +48,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:55](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L55)
+[stores/txn-store.ts:55](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L55)
 
 ***
 
@@ -58,7 +58,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:54](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L54)
+[stores/txn-store.ts:54](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L54)
 
 ***
 
@@ -68,7 +68,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:56](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L56)
+[stores/txn-store.ts:56](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L56)
 
 ## Methods
 
@@ -86,7 +86,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:66](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L66)
+[stores/txn-store.ts:66](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L66)
 
 ***
 
@@ -100,45 +100,25 @@
 
 #### Defined in
 
-[stores/txn-store.ts:60](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L60)
-
-***
-
-### ensureTxns()
-
-> **ensureTxns**(`txids`): `Promise`\<`void`\>
-
-#### Parameters
-
-• **txids**: `string`[]
-
-#### Returns
-
-`Promise`\<`void`\>
-
-#### Defined in
-
-[stores/txn-store.ts:217](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L217)
+[stores/txn-store.ts:60](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L60)
 
 ***
 
 ### loadTx()
 
-> **loadTx**(`txid`, `fromRemote`): `Promise`\<`undefined` \| `Transaction`\>
+> **loadTx**(`txid`): `Promise`\<`Transaction`\>
 
 #### Parameters
 
 • **txid**: `string`
 
-• **fromRemote**: `boolean` = `false`
-
 #### Returns
 
-`Promise`\<`undefined` \| `Transaction`\>
+`Promise`\<`Transaction`\>
 
 #### Defined in
 
-[stores/txn-store.ts:78](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L78)
+[stores/txn-store.ts:78](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L78)
 
 ***
 
@@ -152,7 +132,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:170](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L170)
+[stores/txn-store.ts:184](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L184)
 
 ***
 
@@ -166,7 +146,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:129](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L129)
+[stores/txn-store.ts:144](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L144)
 
 ***
 
@@ -180,7 +160,7 @@
 
 #### Defined in
 
-[stores/txn-store.ts:121](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L121)
+[stores/txn-store.ts:136](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L136)
 
 ***
 
@@ -198,4 +178,4 @@
 
 #### Defined in
 
-[stores/txn-store.ts:100](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/stores/txn-store.ts#L100)
+[stores/txn-store.ts:113](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/stores/txn-store.ts#L113)

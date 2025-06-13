@@ -1,15 +1,12 @@
 
-import type { IndexContext } from "../models/index-context";
-import { IndexData } from "../models/index-data";
-import { Indexer, IndexMode, ParseMode } from "../models/indexer";
-import { Txo, TxoStatus } from "../models/txo";
-import { Hash, HD, Utils } from "@bsv/sdk";
-import { TxoStore } from "../stores/txo-store";
-import { Outpoint, type Ingest } from "../models";
-import type { RemoteBsv20 } from "./remote-types";
-import { Bsv20Status, deriveFundAddress, FEE_XPUB } from "./bsv20";
+import type { IndexContext, IndexSummary } from "../models/index-context";
+import { type IndexData } from "../models/index-data";
+import { Indexer, IndexMode } from "../models/indexer";
+import { Utils } from "@bsv/sdk";
+import { Bsv20Status, deriveFundAddress } from "./bsv20";
 import { OneSatProvider } from "../providers/1sat-provider";
 import type { Network } from "../spv-store";
+import { ParseMode } from "../models";
 
 export class Bsv21 {
   status = Bsv20Status.Pending;
@@ -27,13 +24,10 @@ export class Bsv21 {
   constructor(props: Bsv21) {
     this.id = props.id || "";
     Object.assign(this, props);
-
   }
 
   static fromJSON(obj: any): Bsv21 {
-    // if (typeof obj.id != "string" && !Array.isArray(obj.id)) return;
     const bsv21 = new Bsv21({
-      // id: new Outpoint(obj.id as string),x
       ...obj,
       amt: BigInt(obj.amt),
       dec: parseInt(obj.dec || '0'),
@@ -45,14 +39,17 @@ export class Bsv21 {
 export class Bsv21Indexer extends Indexer {
   tag = "bsv21";
   name = "Bsv21s";
+  tokens: { [id: string]: Bsv21 } = {};
 
   provider: OneSatProvider;
   constructor(
     public owners = new Set<string>(),
     public indexMode: IndexMode,
+    tokens: Bsv21[] = [],
     public network: Network = "mainnet",
   ) {
-    super(owners, indexMode, network);
+    super(owners, network);
+    tokens.forEach((token) => this.tokens[token.id] = token);
     this.provider = new OneSatProvider(network);
   }
 
@@ -62,11 +59,16 @@ export class Bsv21Indexer extends Indexer {
     if (txo.data.insc?.data.file.type !== "application/bsv-20") return;
     let bsv21: Bsv21;
     try {
-      bsv21 = Bsv21.fromJSON(JSON.parse(Utils.toUTF8(txo.data.insc?.data.file.content)));
+      let j: any
+      try {
+        j = JSON.parse(Utils.toUTF8(txo.data.insc?.data.file.content))
+      } catch (e) {
+        return
+      }
+      bsv21 = Bsv21.fromJSON(j);
     } catch (e) {
       return;
     }
-    const data = new IndexData(bsv21);
     if (bsv21.amt <= 0n || bsv21.amt > 2 ** 64 - 1) return;
     switch (bsv21.op) {
       case "deploy+mint":
@@ -77,72 +79,95 @@ export class Bsv21Indexer extends Indexer {
         break;
       case "transfer":
       case "burn":
+        if (!bsv21.id) {
+          return;
+        }
         break;
       default:
         return;
     }
-    if (!bsv21.id) {
-      return;
-    }
+
     bsv21.fundAddress = deriveFundAddress(txo.outpoint.toBEBinary());
+    const idxData: IndexData = {
+      data: bsv21,
+      events: [],
+    };
     if (txo.owner && this.owners.has(txo.owner)) {
-      data.events.push({ id: "address", value: txo.owner });
-      data.events.push({ id: "id", value: bsv21.id });
+      idxData.events!.push({ id: "address", value: txo.owner });
+      idxData.events!.push({ id: "id", value: bsv21.id });
       if (bsv21.contract) {
-        data.events.push({ id: "contract", value: bsv21.contract });
+        idxData.events!.push({ id: "contract", value: bsv21.contract });
       }
     }
 
-    return data;
+    return idxData;
   }
 
-  async preSave(ctx: IndexContext) {
-    const balance: { [id: string]: bigint } = {};
-    const tokensIn: { [id: string]: Txo[] } = {};
+  async summerize(ctx: IndexContext, parseMode: ParseMode): Promise<IndexSummary | undefined> {
+    // if (this.indexMode == IndexMode.Trust) return;
+    // const balance: { [id: string]: bigint } = {};
+    // const tokensIn: { [id: string]: Txo[] } = {};
+
+    let summaryToken: Bsv21 | undefined;
+    let summaryBalance = 0;
     for (const spend of ctx.spends) {
       const bsv21 = spend.data.bsv21;
       if (!bsv21) continue;
-      if (bsv21.data.status != Bsv20Status.Valid && this.indexMode == IndexMode.Trust) {
-        const remote = await this.provider.getBsv2021Txo(spend.outpoint);
+      let token = this.tokens[bsv21.data.id];
+      if (!token) {
+        const remote = await this.provider.getBsv2021Txo(bsv21.data.id);
         if (remote) {
-          bsv21.data.status = remote.status;
-          bsv21.data.sym = remote.sym;
-          bsv21.data.icon = remote.icon;
-          bsv21.data.dec = remote.dec;
+          token = new Bsv21({
+            op: 'deploy+mint',
+            id: bsv21.data.id,
+            amt: BigInt(remote.amt),
+            dec: remote.dec,
+            sym: remote.sym,
+            icon: remote.icon,
+            status: Bsv20Status.Pending,
+            fundAddress: '',
+          });
+          this.tokens[token.id] = token;
         }
       }
-      if (bsv21.data.status == Bsv20Status.Pending) {
-        for (const txo of ctx.txos) {
-          const outBsv21 = txo.data?.bsv21;
-          if (outBsv21?.data?.id == bsv21.data.id) {
-            outBsv21.data.status = Bsv20Status.Pending;
-            outBsv21.data.sym = bsv21.data.sym;
-            outBsv21.data.icon = bsv21.data.icon;
-            outBsv21.data.dec = bsv21.data.dec;
-          }
-        }
-        return
-      } else if (bsv21.data.status == Bsv20Status.Valid) {
-        if (!tokensIn[bsv21.data.id]) {
-          tokensIn[bsv21.data.id] = [];
-        }
-        tokensIn[bsv21.data.id].push(spend);
-        balance[bsv21.data!.id] =
-          (balance[bsv21.data!.id] || 0n) + bsv21.data.amt;
+      if (token) {
+        bsv21.data.sym = token.sym;
+        bsv21.data.icon = token.icon;
+        bsv21.data.dec = token.dec;
       }
+      if (!summaryToken && token) summaryToken = token;
+      if (summaryToken && bsv21.data.id == summaryToken.id && spend.owner && this.owners.has(spend.owner)) {
+        summaryBalance -= Number(bsv21.data.amt)
+      }
+    //   if (bsv21.data.status == Bsv20Status.Pending) {
+    //     for (const txo of ctx.txos) {
+    //       const outBsv21 = txo.data?.bsv21;
+    //       if (outBsv21?.data?.id == bsv21.data.id) {
+    //         outBsv21.data.status = Bsv20Status.Pending;
+    //         outBsv21.data.sym = bsv21.data.sym;
+    //         outBsv21.data.icon = bsv21.data.icon;
+    //         outBsv21.data.dec = bsv21.data.dec;
+    //       }
+    //     }
+    //     hasPending = true;
+    //   } else if (bsv21.data.status == Bsv20Status.Valid) {
+    //     if (!tokensIn[bsv21.data.id]) {
+    //       tokensIn[bsv21.data.id] = [];
+    //     }
+    //     tokensIn[bsv21.data.id].push(spend);
+    //     balance[bsv21.data!.id] =
+    //       (balance[bsv21.data!.id] || 0n) + bsv21.data.amt;
+    //   }
     }
-    const tokensOut: { [id: string]: Txo[] } = {};
-    const reasons: { [id: string]: string } = {};
+    // const tokensOut: { [id: string]: Txo[] } = {};
+    // const reasons: { [id: string]: string } = {};
     for (const txo of ctx.txos) {
       const bsv21 = txo.data?.bsv21;
       if (!bsv21 || !["transfer", "burn"].includes(bsv21.data.op)) continue;
-      let token: Bsv21 | undefined;
-      for (const spend of tokensIn[bsv21.data.id] || []) {
-        token = spend.data.bsv21.data;
-        bsv21.deps.push(spend.outpoint);
-      }
-      if ((balance[bsv21.data.id] || 0n) < bsv21.data.amt) {
-        reasons[bsv21.data.id] = "Insufficient inputs";
+      const token = this.tokens[bsv21.data.id];
+      if (!summaryToken) summaryToken = bsv21.data as Bsv21;
+      if (summaryToken && bsv21.data.id == summaryToken?.id && txo.owner && this.owners.has(txo.owner)) {
+        summaryBalance += Number(bsv21.data.amt)
       }
 
       if (token) {
@@ -153,136 +178,42 @@ export class Bsv21Indexer extends Indexer {
         bsv21.data.dec = token.dec;
       }
 
-      if (!tokensOut[bsv21.data.id]) {
-        tokensOut[bsv21.data.id] = [];
-      }
-      tokensOut[bsv21.data.id].push(txo);
-      balance[bsv21.data.id] =
-        (balance[bsv21.data.id] || 0n) - BigInt(bsv21.data.amt);
+      // if (!tokensOut[bsv21.data.id]) {
+      //   tokensOut[bsv21.data.id] = [];
+      // }
+      // tokensOut[bsv21.data.id].push(txo);
+      // balance[bsv21.data.id] =
+      //   (balance[bsv21.data.id] || 0n) - BigInt(bsv21.data.amt);
     }
 
-    for (const [id, txos] of Object.entries(tokensOut)) {
-      const reason = reasons[id];
-      for (const txo of txos) {
-        txo.data.bsv21.data.status = reason
-          ? Bsv20Status.Invalid
-          : Bsv20Status.Valid;
-        txo.data.bsv21.data.reason = reason;
+    // if (!hasPending) {
+    //   for (const [id, txos] of Object.entries(tokensOut)) {
+    //     const reason = reasons[id];
+    //     for (const txo of txos) {
+    //       txo.data.bsv21.data.status = reason
+    //         ? Bsv20Status.Invalid
+    //         : Bsv20Status.Valid;
+    //       txo.data.bsv21.data.reason = reason;
+    //     }
+    //   }
+    // }
+    if (summaryToken?.sym) {
+      return {
+        id: summaryToken.sym,
+        amount: summaryBalance / Math.pow(10, summaryToken.dec || 0),
+        icon: summaryToken.icon,
       }
     }
   }
 
-  async sync(txoStore: TxoStore, ingestQueue: { [txid: string]: Ingest }): Promise<void> {
-    const limit = 100;
-    for await (const owner of this.owners) {
-      let resp = await fetch(
-        `https://ordinals.gorillapool.io/api/bsv20/${owner}/balance`,
-      );
-      const balance = (await resp.json()) as RemoteBsv20[];
-      for await (const token of balance) {
-        if (!token.id) continue;
-        console.log("importing", token.id);
-        // try {
-        let offset = 0;
-        let utxos: RemoteBsv20[] = [];
-        do {
-          resp = await fetch(
-            `https://ordinals.gorillapool.io/api/bsv20/${owner}/id/${token.id}?limit=${limit}&offset=${offset}&includePending=true`,
-          );
-          utxos = ((await resp.json()) as RemoteBsv20[]) || [];
-          const txos: Txo[] = [];
-          for (const u of utxos) {
-            const txo = new Txo(
-              new Outpoint(u.txid, u.vout),
-              1n,
-              Utils.toArray(u.script, "base64"),
-              TxoStatus.Trusted,
-            );
-            if (u.height) {
-              txo.block = { height: u.height, idx: BigInt(u.idx || 0) };
-            }
-            txo.data[this.tag] = new IndexData(
-              Bsv21.fromJSON({
-                id: token.id,
-                amt: u.amt,
-                dec: token.dec,
-                sym: token.sym,
-                op: u.op!,
-                status: u.status,
-                icon: token.icon,
-                fundAddress: deriveFundAddress(new Outpoint(token.id).toBEBinary())
-                // contract: token.contract
-              }),
-              [
-                { id: "address", value: owner },
-                { id: "id", value: token.id!.toString() },
-              ],
-            );
-            if (u.listing && u.payout && u.price) {
-              const price = BigInt(u.price);
-              txo.data.list = new IndexData(
-                {
-                  payout: Utils.toArray(u.payout, "base64"),
-                  price,
-                },
-                [
-                  {
-                    id: "price",
-                    value: price.toString(16).padStart(16, "0"),
-                  },
-                ],
-              );
-            }
-            txos.push(txo);
-          }
-          if (this.indexMode !== IndexMode.Verify) {
-            await txoStore.storage.putMany(txos);
-          }
+  serialize(bsv21: Bsv21): string {
+    return JSON.stringify({
+      ...bsv21,
+      amt: bsv21.amt.toString(),
+    })
+  }
 
-          if (this.indexMode !== IndexMode.Trust) {
-            for (const t of txos) {
-              let ingest = ingestQueue[t.outpoint.txid];
-              if (!ingest) {
-                ingest = {
-                  txid: t.outpoint.txid,
-                  height: t.block.height,
-                  source: "bsv21",
-                  idx: Number(t.block.idx),
-                  parseMode: ParseMode.Persist,
-                  outputs: [t.outpoint.vout],
-                };
-                ingestQueue[t.outpoint.txid] = ingest;
-              } else {
-                ingest.outputs!.push(t.outpoint.vout);
-              }
-            }
-          }
-          // if (this.indexMode !== IndexMode.Verify) {
-          //   resp = await fetch(
-          //     `https://ordinals.gorillapool.io/api/bsv20/${owner}/id/${token.id}/ancestors`,
-          //   );
-          //   const txids = (await resp.json()) as { [score: string]: string };
-          //   for (const [score, txid] of Object.entries(txids)) {
-          //     const [height, idx] = score.split(".");
-          //     let ingest = ingestQueue[txid];
-          //     if (!ingest) {
-          //       ingest = {
-          //         txid,
-          //         height: parseInt(height),
-          //         source: "bsv21",
-          //         idx: Number(idx),
-          //         parseMode: ParseMode.Dependency,
-          //       };
-          //       ingestQueue[t.outpoint.txid] = ingest;
-          //     } else {
-          //       ingest.outputs!.push(t.outpoint.vout);
-          //     }
-          //   }
-          // }
-
-          offset += limit;
-        } while (utxos.length == limit);
-      }
-    }
+  deserialize(str: string): Bsv21 {
+    return new Bsv21(JSON.parse(str));
   }
 }

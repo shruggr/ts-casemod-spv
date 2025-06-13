@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / BroadcastStatus
+[spv-store v0.1.73](../globals.md) / BroadcastStatus
 
 # Enumeration: BroadcastStatus
 
@@ -14,7 +14,7 @@
 
 #### Defined in
 
-[services/broadcast-service.ts:10](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/broadcast-service.ts#L10)
+[services/broadcast-service.ts:10](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/services/broadcast-service.ts#L10)
 
 ***
 
@@ -24,7 +24,7 @@
 
 #### Defined in
 
-[services/broadcast-service.ts:11](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/broadcast-service.ts#L11)
+[services/broadcast-service.ts:11](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/services/broadcast-service.ts#L11)
 
 ***
 
@@ -34,7 +34,7 @@
 
 #### Defined in
 
-[services/broadcast-service.ts:9](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/broadcast-service.ts#L9)
+[services/broadcast-service.ts:9](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/services/broadcast-service.ts#L9)
 
 ***
 
@@ -44,4 +44,4 @@
 
 #### Defined in
 
-[services/broadcast-service.ts:8](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/services/broadcast-service.ts#L8)
+[services/broadcast-service.ts:8](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/services/broadcast-service.ts#L8)

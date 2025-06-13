@@ -1,8 +1,8 @@
-[**spv-store v0.0.1**](../README.md) • **Docs**
+[**spv-store v0.1.73**](../README.md) • **Docs**
 
 ***
 
-[spv-store v0.0.1](../globals.md) / OriginIndexer
+[spv-store v0.1.73](../globals.md) / OriginIndexer
 
 # Class: OriginIndexer
 
@@ -16,15 +16,15 @@ Abstract class representing an Indexer.
 
 ### new OriginIndexer()
 
-> **new OriginIndexer**(`owners`, `indexMode`, `network`): [`OriginIndexer`](OriginIndexer.md)
+> **new OriginIndexer**(`owners`, `network`, `syncHistory`): [`OriginIndexer`](OriginIndexer.md)
 
 #### Parameters
 
 • **owners**: `Set`\<`string`\> = `...`
 
-• **indexMode**: [`IndexMode`](../enumerations/IndexMode.md)
-
 • **network**: [`Network`](../type-aliases/Network.md) = `"mainnet"`
+
+• **syncHistory**: `boolean` = `false`
 
 #### Returns
 
@@ -36,25 +36,9 @@ Abstract class representing an Indexer.
 
 #### Defined in
 
-[indexers/origin.ts:34](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L34)
+[indexers/origin.ts:32](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L32)
 
 ## Properties
-
-### indexMode
-
-> **indexMode**: [`IndexMode`](../enumerations/IndexMode.md)
-
-The mode of the indexer.
-
-#### Inherited from
-
-[`Indexer`](Indexer.md).[`indexMode`](Indexer.md#indexmode)
-
-#### Defined in
-
-[indexers/origin.ts:36](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L36)
-
-***
 
 ### name
 
@@ -68,7 +52,7 @@ Human readable name for this indexer.
 
 #### Defined in
 
-[indexers/origin.ts:31](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L31)
+[indexers/origin.ts:29](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L29)
 
 ***
 
@@ -84,17 +68,17 @@ The network the indexer is operating on. Defaults to "mainnet".
 
 #### Defined in
 
-[indexers/origin.ts:37](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L37)
+[indexers/origin.ts:34](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L34)
 
 ***
 
 ### oneSat
 
-> **oneSat**: `OneSatProvider`
+> **oneSat**: [`OneSatProvider`](OneSatProvider.md)
 
 #### Defined in
 
-[indexers/origin.ts:32](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L32)
+[indexers/origin.ts:30](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L30)
 
 ***
 
@@ -112,7 +96,17 @@ A set of owners that this indexer is interested in.
 
 #### Defined in
 
-[indexers/origin.ts:35](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L35)
+[indexers/origin.ts:33](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L33)
+
+***
+
+### syncHistory
+
+> **syncHistory**: `boolean` = `false`
+
+#### Defined in
+
+[indexers/origin.ts:35](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L35)
 
 ***
 
@@ -128,13 +122,13 @@ Unique identifier for this indexer.
 
 #### Defined in
 
-[indexers/origin.ts:30](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L30)
+[indexers/origin.ts:28](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L28)
 
 ## Methods
 
 ### parse()
 
-> **parse**(`ctx`, `vout`, `parseMode`): `Promise`\<`undefined` \| [`IndexData`](IndexData.md)\>
+> **parse**(`ctx`, `vout`, `parseMode`): `Promise`\<`undefined` \| [`IndexData`](../interfaces/IndexData.md)\>
 
 Parses an output and returns the index data if it is relevant to this indexer.
 If the output is not relevant, it returns undefined.
@@ -153,7 +147,7 @@ The output number to be parsed.
 
 #### Returns
 
-`Promise`\<`undefined` \| [`IndexData`](IndexData.md)\>
+`Promise`\<`undefined` \| [`IndexData`](../interfaces/IndexData.md)\>
 
 A promise that resolves to the index data if relevant, or undefined if not.
 
@@ -163,13 +157,41 @@ A promise that resolves to the index data if relevant, or undefined if not.
 
 #### Defined in
 
-[indexers/origin.ts:43](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L43)
+[indexers/origin.ts:41](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L41)
 
 ***
 
-### preSave()
+### resolve()
 
-> **preSave**(`ctx`): `Promise`\<`void`\>
+> **resolve**(`txoStore`, `block`): `Promise`\<`void`\>
+
+Resolve asynchronous validations on new block
+
+#### Parameters
+
+• **txoStore**: [`TxoStore`](TxoStore.md)
+
+• **block**: [`BlockHeader`](../interfaces/BlockHeader.md)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+A promise that resolves when the indexer is resolved.
+
+#### Inherited from
+
+[`Indexer`](Indexer.md).[`resolve`](Indexer.md#resolve)
+
+#### Defined in
+
+[models/indexer.ts:114](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/models/indexer.ts#L114)
+
+***
+
+### summerize()
+
+> **summerize**(`ctx`): `Promise`\<`undefined` \| [`IndexSummary`](../type-aliases/IndexSummary.md)\>
 
 Pre-save hook that evaluates the index data for the entire transaction before it is persisted.
 
@@ -181,23 +203,23 @@ The context of the index operation.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`undefined` \| [`IndexSummary`](../type-aliases/IndexSummary.md)\>
 
 A promise that resolves when the pre-save evaluation is complete.
 
-#### Inherited from
+#### Overrides
 
-[`Indexer`](Indexer.md).[`preSave`](Indexer.md#presave)
+[`Indexer`](Indexer.md).[`summerize`](Indexer.md#summerize)
 
 #### Defined in
 
-[models/indexer.ts:79](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/models/indexer.ts#L79)
+[indexers/origin.ts:113](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L113)
 
 ***
 
 ### sync()
 
-> **sync**(`txoStore`, `ingestQueue`): `Promise`\<`void`\>
+> **sync**(`txoStore`, `ingestQueue`, `parseMode`): `Promise`\<`number`\>
 
 Synchronize txo data for indexer from a remote source.
 
@@ -211,9 +233,11 @@ The store containing transaction outputs.
 
 A queue of transactions to be ingested, keyed by transaction ID.
 
+• **parseMode**: [`ParseMode`](../enumerations/ParseMode.md) = `ParseMode.Persist`
+
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`number`\>
 
 A promise that resolves when the synchronization is complete.
 
@@ -223,4 +247,4 @@ A promise that resolves when the synchronization is complete.
 
 #### Defined in
 
-[indexers/origin.ts:118](https://github.com/shruggr/ts-casemod-spv/blob/e58946f83152e9deb265157899c0af08eff6c009/src/indexers/origin.ts#L118)
+[indexers/origin.ts:152](https://github.com/bitcoin-sv/spv-store/blob/9735342843cd2ea4b04983988f1fa98b59c98947/src/indexers/origin.ts#L152)
